@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Header } from "./components/Header";
 import { CategoryNav } from "./components/CategoryNav";
+import { Dashboard } from "./components/Dashboard";
 import { FeaturedSystems } from "./components/FeaturedSystems";
 import { SystemCard } from "./components/SystemCard";
 import { SystemModal } from "./components/SystemModal";
@@ -14,6 +15,7 @@ export default function App() {
   const [systems, setSystems] = useState<DigitalSystem[]>(digitalSystems);
 
   // Filter systems based on search, category, and department
+  // All filters work together with AND logic - you can combine category + department + search
   const filteredSystems = useMemo(() => {
     let filtered = systems;
 
@@ -34,7 +36,7 @@ export default function App() {
       filtered = filtered.filter(system => system.category === selectedCategory);
     }
 
-    // Filter by department
+    // Filter by department - can be combined with category and search
     if (selectedDepartment) {
       const departmentMap: Record<string, string[]> = {
         'saude': ['SEMUS'],
@@ -92,6 +94,11 @@ export default function App() {
         onDepartmentChange={setSelectedDepartment}
       />
 
+      {/* Dashboard - only show when no search/filter is active */}
+      {!searchTerm && !selectedCategory && !selectedDepartment && (
+        <Dashboard systems={systems} />
+      )}
+
       {/* Featured Systems - only show when no search/filter is active */}
       {!searchTerm && !selectedCategory && !selectedDepartment && (
         <FeaturedSystems 
@@ -146,17 +153,32 @@ export default function App() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedCategory 
-                    ? categories[selectedCategory as keyof typeof categories]
-                    : selectedDepartment
-                      ? departmentCategories[selectedDepartment as keyof typeof departmentCategories]
-                      : searchTerm 
-                        ? `Resultados para "${searchTerm}"`
-                        : "Todos os Sistemas"
-                  }
+                  {(() => {
+                    const filters = [];
+                    if (selectedCategory) {
+                      filters.push(categories[selectedCategory as keyof typeof categories]);
+                    }
+                    if (selectedDepartment) {
+                      filters.push(departmentCategories[selectedDepartment as keyof typeof departmentCategories]);
+                    }
+                    if (searchTerm) {
+                      filters.push(`"${searchTerm}"`);
+                    }
+                    
+                    if (filters.length > 0) {
+                      return filters.join(' • ');
+                    }
+                    
+                    return "Todos os Sistemas";
+                  })()}
                 </h2>
                 <p className="text-gray-600 mt-1">
                   {filteredSystems.length} sistema{filteredSystems.length !== 1 ? 's' : ''} encontrado{filteredSystems.length !== 1 ? 's' : ''}
+                  {(selectedCategory || selectedDepartment || searchTerm) && (
+                    <span className="text-sm ml-2">
+                      ({(selectedCategory || selectedDepartment) && searchTerm ? 'filtros combinados' : 'filtrado'})
+                    </span>
+                  )}
                 </p>
               </div>
               
@@ -174,7 +196,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredSystems.map((system) => (
                 <SystemCard
                   key={system.id}
