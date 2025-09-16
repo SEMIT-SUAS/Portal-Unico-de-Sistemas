@@ -20,7 +20,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32">
-      <div onClick={() => onSystemClick(system)} className="h-full">
+      <div className="h-full">
         <div className="flex h-full p-4">
           {/* Ícone no canto superior esquerdo */}
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-yellow-100 flex-shrink-0">
@@ -34,7 +34,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
           {/* Conteúdo à direita do ícone */}
           <div className="flex-1 ml-3 flex flex-col justify-between">
             {/* Nome e badge no topo */}
-            <div>
+            <div onClick={() => onSystemClick(system)} className="cursor-pointer">
               <div className="flex items-start gap-2 mb-2">
                 <CardTitle className="text-sm leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors flex-1">
                   {system.name}
@@ -75,6 +75,8 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                 e.stopPropagation();
                 if (system.accessUrl && system.accessUrl !== '#') {
                   window.open(system.accessUrl, '_blank');
+                } else {
+                  onSystemClick(system);
                 }
               }}
             >
