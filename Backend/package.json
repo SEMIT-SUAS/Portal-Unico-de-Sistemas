@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "dev": "nodemon src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "db:init": "ts-node src/config/initDatabase.ts",
+    "db:reset": "npm run db:drop && npm run db:create && npm run db:init",
+    "db:test": "ts-node scripts/testConnection.ts",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix"
+  }
+}
