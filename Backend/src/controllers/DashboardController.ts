@@ -1,47 +1,27 @@
 import { Request, Response } from 'express';
 import { StatsModel } from '../models/StatsModel';
 import { SystemModel } from '../models/SystemModel';
-import { CategoryModel } from '../models/CategoryModel';
+import { getConnection } from '../config/database';
 
 export class DashboardController {
-  /**
-   * Obter estatísticas gerais do dashboard
-   */
+  // Obter estatísticas do dashboard
   static async getDashboardStats(req: Request, res: Response) {
     try {
-      // Obter estatísticas básicas
       const stats = await StatsModel.getDashboardStats();
-      
-      // Obter estatísticas por departamento
       const departmentStats = await StatsModel.getDepartmentStats();
       
-      // Obter contagem de sistemas por departamento (formato específico para o frontend)
+      // Obter contagem por departamento (formato específico para o frontend)
       const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
       
-      // Obter sistemas mais populares e melhor avaliados
-      const popularSystems = await StatsModel.getPopularSystems(5);
-      const topRatedSystems = await StatsModel.getTopRatedSystems(5);
-
       res.json({
         success: true,
         data: {
-          // Estatísticas gerais
           totalSystems: stats.totalSystems,
           totalDownloads: stats.totalDownloads,
           totalUsers: stats.totalUsers,
           averageRating: stats.averageRating,
-          
-          // Estatísticas por departamento (formato do frontend)
           systemsByDepartment,
-          
-          // Dados adicionais para gráficos
           departmentStats,
-          
-          // Sistemas em destaque
-          popularSystems,
-          topRatedSystems,
-          
-          // Timestamp
           lastUpdated: new Date().toISOString()
         }
       });
@@ -50,14 +30,12 @@ export class DashboardController {
       res.status(500).json({
         success: false,
         message: 'Erro ao carregar estatísticas do dashboard',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
   }
 
-  /**
-   * Obter dados para gráficos do dashboard
-   */
+  // Obter dados para gráficos
   static async getDashboardCharts(req: Request, res: Response) {
     try {
       const [departmentStats, categoryStats, ratingDistribution] = await Promise.all([
@@ -79,18 +57,17 @@ export class DashboardController {
       res.status(500).json({
         success: false,
         message: 'Erro ao carregar dados dos gráficos',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
   }
 
-  /**
-   * Obter dados para cards do dashboard (formato específico do frontend)
-   */
+  // Obter dados para cards
   static async getDashboardCards(req: Request, res: Response) {
     try {
       const stats = await StatsModel.getDashboardStats();
       const totalReviews = await DashboardController.getTotalReviews();
+      const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
 
       res.json({
         success: true,
@@ -99,7 +76,7 @@ export class DashboardController {
           totalDownloads: stats.totalDownloads,
           averageRating: stats.averageRating,
           totalReviews,
-          systemsByDepartment: await DashboardController.getSystemsByDepartmentCount()
+          systemsByDepartment
         }
       });
     } catch (error) {
@@ -107,16 +84,17 @@ export class DashboardController {
       res.status(500).json({
         success: false,
         message: 'Erro ao carregar cards do dashboard',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
   }
 
-  /**
-   * Métodos auxiliares privados
-   */
+  // Métodos auxiliares
   private static async getSystemsByDepartmentCount(): Promise<Record<string, number>> {
+    let connection;
     try {
+      connection = await getConnection();
+      
       const query = `
         SELECT 
           CASE 
@@ -137,9 +115,8 @@ export class DashboardController {
         GROUP BY department
       `;
 
-      const result = await pool.query(query);
+      const [rows] = await connection.execute(query);
       
-      // Converter para o formato esperado pelo frontend
       const formattedResult: Record<string, number> = {
         'saude': 0,
         'educacao': 0,
@@ -150,12 +127,14 @@ export class DashboardController {
         'tecnologia': 0,
         'transito-transporte': 0,
         'cultura': 0,
-        'urbanismo': 0
+        'urbanismo': 0,
+        'outros': 0
       };
 
-      result.rows.forEach(row => {
-        if (formattedResult.hasOwnProperty(row.department)) {
-          formattedResult[row.department] = parseInt(row.count);
+      (rows as any[]).forEach((row: any) => {
+        const department = row.department.toLowerCase();
+        if (formattedResult.hasOwnProperty(department)) {
+          formattedResult[department] = parseInt(row.count);
         }
       });
 
@@ -172,24 +151,38 @@ export class DashboardController {
         'tecnologia': 0,
         'transito-transporte': 0,
         'cultura': 0,
-        'urbanismo': 0
+        'urbanismo': 0,
+        'outros': 0
       };
+    } finally {
+      if (connection) {
+        await connection.release();
+      }
     }
   }
 
   private static async getTotalReviews(): Promise<number> {
+    let connection;
     try {
+      connection = await getConnection();
       const query = `SELECT COALESCE(SUM(reviews_count), 0) as total_reviews FROM digital_systems`;
-      const result = await pool.query(query);
-      return parseInt(result.rows[0].total_reviews);
+      const [rows] = await connection.execute(query);
+      return parseInt((rows as any[])[0].total_reviews);
     } catch (error) {
       console.error('Error getting total reviews:', error);
       return 0;
+    } finally {
+      if (connection) {
+        await connection.release();
+      }
     }
   }
 
   private static async getRatingDistribution(): Promise<{ rating: number; count: number }[]> {
+    let connection;
     try {
+      connection = await getConnection();
+      
       const query = `
         SELECT 
           CASE 
@@ -208,17 +201,18 @@ export class DashboardController {
         ORDER BY rating_group
       `;
 
-      const result = await pool.query(query);
-      return result.rows.map(row => ({
+      const [rows] = await connection.execute(query);
+      return (rows as any[]).map((row: any) => ({
         rating: parseInt(row.rating_group),
         count: parseInt(row.count)
       }));
     } catch (error) {
       console.error('Error getting rating distribution:', error);
       return [];
+    } finally {
+      if (connection) {
+        await connection.release();
+      }
     }
   }
 }
-
-// Importar pool diretamente (ajuste conforme sua estrutura)
-import { pool } from '../config/database';

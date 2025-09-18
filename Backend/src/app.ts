@@ -1,10 +1,15 @@
+// src/app.ts
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import dotenv from 'dotenv';
 
-// Importar configurações
-import { config, corsOptions, initDatabase, validateConfig } from './config';
+// Carregar variáveis de ambiente PRIMEIRO
+dotenv.config();
+
+// Importar configurações DEPOIS do dotenv.config()
+import { config, corsOptions, initDatabase, validateConfig, pool } from './config';
 import routes from './routes';
 
 // Validar configurações
@@ -32,13 +37,28 @@ app.get('/health', async (req, res) => {
     res.status(200).json({ 
       status: 'OK', 
       database: 'Connected',
-      environment: config.nodeEnv
+      environment: config.nodeEnv,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
+    // Tratamento de erro seguro para TypeScript
+    let errorMessage = 'Erro desconhecido';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String((error as any).message);
+    }
+    
+    console.error('Health check error:', error);
+    
     res.status(500).json({ 
       status: 'Error', 
       database: 'Disconnected',
-      error: error.message 
+      error: errorMessage,
+      timestamp: new Date().toISOString()
     });
   }
 });

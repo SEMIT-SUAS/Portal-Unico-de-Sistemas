@@ -62,8 +62,8 @@ export const validateConfig = (): void => {
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
-  if (missingEnvVars.length > 0) {
-    console.error('❌ Variáveis de ambiente ausentes:', missingEnvVars.join(', '));
+  if (missingVars.length > 0) {
+    console.error('❌ Variáveis de ambiente ausentes:', missingVars.join(', '));
     console.error('💡 Certifique-se de configurar o arquivo .env corretamente');
     process.exit(1);
   }
