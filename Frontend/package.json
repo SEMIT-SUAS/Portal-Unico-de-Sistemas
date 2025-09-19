@@ -1,5 +1,5 @@
 {
-      "name": "Catálogo de Sistemas Digitais",
+      "name": "catalogo-sistemas-digitais",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
@@ -49,6 +49,7 @@
       "devDependencies": {
             "@types/node": "^20.10.0",
             "@types/react": "^19.1.13",
+            "@types/react-dom": "^19.1.9",
             "@vitejs/plugin-react-swc": "^3.10.2",
             "vite": "6.3.5"
       },

@@ -79,6 +79,12 @@ export default function App() {
     );
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory(null);
+    setSelectedDepartment(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
@@ -138,11 +144,7 @@ export default function App() {
               }
             </p>
             <button
-              onClick={() => {git 
-                setSearchTerm("");
-                setSelectedCategory(null);
-                setSelectedDepartment(null);
-              }}
+              onClick={clearFilters}
               className="text-blue-600 hover:text-blue-800 font-medium"
             >
               Limpar filtros
@@ -184,11 +186,7 @@ export default function App() {
               
               {(searchTerm || selectedCategory || selectedDepartment) && (
                 <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedCategory(null);
-                    setSelectedDepartment(null);
-                  }}
+                  onClick={clearFilters}
                   className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                 >
                   Limpar filtros
