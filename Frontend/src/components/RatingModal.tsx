@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, MapPin, User, Calendar } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -28,6 +28,10 @@ export interface RatingData {
     longitude: number;
   };
 }
+
+// Definindo tipos para os valores dos selects
+type CorOption = "branca" | "preta" | "parda" | "amarela" | "indigena" | "nao-informar";
+type SexoOption = "masculino" | "feminino" | "nao-binario" | "nao-informar";
 
 export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingModalProps) {
   const [rating, setRating] = useState(0);
@@ -179,7 +183,10 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
             <div className="space-y-4">
               <div>
                 <Label htmlFor="cor">Cor/Raça</Label>
-                <Select onValueChange={(value) => setDemographics({...demographics, cor: value})}>
+                <Select 
+                  onValueChange={(value: CorOption) => setDemographics({...demographics, cor: value})}
+                  value={demographics.cor}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -196,7 +203,10 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
 
               <div>
                 <Label htmlFor="sexo">Sexo</Label>
-                <Select onValueChange={(value) => setDemographics({...demographics, sexo: value})}>
+                <Select 
+                  onValueChange={(value: SexoOption) => setDemographics({...demographics, sexo: value})}
+                  value={demographics.sexo}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>

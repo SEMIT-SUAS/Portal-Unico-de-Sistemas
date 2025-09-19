@@ -1,9 +1,4 @@
-// src/config/database.ts
 import { Pool, PoolConfig } from 'pg';
-import dotenv from 'dotenv';
-
-// Carregar variáveis de ambiente
-dotenv.config();
 
 // Configuração do pool de conexões
 const dbConfig: PoolConfig = {
