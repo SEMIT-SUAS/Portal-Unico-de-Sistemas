@@ -1,22 +1,29 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Header } from "./components/Header";
 import { CategoryNav } from "./components/CategoryNav";
 import { Dashboard } from "./components/Dashboard";
 import { FeaturedSystems } from "./components/FeaturedSystems";
 import { SystemCard } from "./components/SystemCard";
 import { SystemModal } from "./components/SystemModal";
-import { digitalSystems, DigitalSystem, categories, departmentCategories, secretaries } from "./data/systems";
+import { useSystems, useDashboard } from "./hooks/useSystems";
+import { systemService } from "./services/api";
+import { DigitalSystem, categories, departmentCategories } from "./data/systems";
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedSystem, setSelectedSystem] = useState<DigitalSystem | null>(null);
-  const [systems, setSystems] = useState<DigitalSystem[]>(digitalSystems);
+  
+  // Usar hook personalizado para buscar sistemas
+  const { systems, loading, error, refetch } = useSystems();
+  const { stats, loading: statsLoading, error: statsError } = useDashboard();
 
   // Filter systems based on search, category, and department
-  // All filters work together with AND logic - you can combine category + department + search
   const filteredSystems = useMemo(() => {
+    if (loading) return [];
+    if (error) return [];
+
     let filtered = systems;
 
     // Filter by search term
@@ -36,7 +43,7 @@ export default function App() {
       filtered = filtered.filter(system => system.category === selectedCategory);
     }
 
-    // Filter by department - can be combined with category and search
+    // Filter by department
     if (selectedDepartment) {
       const departmentMap: Record<string, string[]> = {
         'saude': ['SEMUS'],
@@ -60,7 +67,7 @@ export default function App() {
     }
 
     return filtered;
-  }, [searchTerm, selectedCategory, selectedDepartment, systems]);
+  }, [searchTerm, selectedCategory, selectedDepartment, systems, loading, error]);
 
   // Count systems by category
   const systemCounts = useMemo(() => {
@@ -71,12 +78,34 @@ export default function App() {
     return counts;
   }, [systems]);
 
-  const handleSystemUpdate = (updatedSystem: DigitalSystem) => {
-    setSystems(prevSystems => 
-      prevSystems.map(system => 
+  const handleSystemUpdate = async (updatedSystem: DigitalSystem) => {
+    try {
+      // Em uma aplicação real, você faria uma chamada PATCH para atualizar no backend
+      // Por enquanto, apenas atualizamos o estado local
+      const updatedSystems = systems.map(system => 
         system.id === updatedSystem.id ? updatedSystem : system
-      )
-    );
+      );
+      // Aqui você precisaria atualizar o estado dos sistemas
+      // Isso depende de como você está gerenciando o estado
+      
+      console.log('System updated:', updatedSystem);
+      
+      // Recarregar os dados para garantir sincronização
+      refetch();
+    } catch (error) {
+      console.error('Error updating system:', error);
+    }
+  };
+
+  const handleAddReview = async (systemId: number, ratingData: any) => {
+    try {
+      await systemService.addReview(systemId, ratingData);
+      // Recarregar os dados após adicionar a avaliação
+      refetch();
+    } catch (error) {
+      console.error('Error adding review:', error);
+      throw error;
+    }
   };
 
   const clearFilters = () => {
@@ -84,6 +113,37 @@ export default function App() {
     setSelectedCategory(null);
     setSelectedDepartment(null);
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando sistemas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Erro ao carregar dados</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,8 +161,8 @@ export default function App() {
       />
 
       {/* Dashboard - only show when no search/filter is active */}
-      {!searchTerm && !selectedCategory && !selectedDepartment && (
-        <Dashboard systems={systems} />
+      {!searchTerm && !selectedCategory && !selectedDepartment && stats && (
+        <Dashboard systems={systems} stats={stats} />
       )}
 
       {/* Featured Systems - only show when no search/filter is active */}
@@ -145,7 +205,7 @@ export default function App() {
             </p>
             <button
               onClick={clearFilters}
-              className="text-blue-600 hover:text-blue-800 font-medium"
+              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
               Limpar filtros
             </button>
@@ -187,7 +247,7 @@ export default function App() {
               {(searchTerm || selectedCategory || selectedDepartment) && (
                 <button
                   onClick={clearFilters}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
                 >
                   Limpar filtros
                 </button>
@@ -212,6 +272,7 @@ export default function App() {
         system={selectedSystem}
         onClose={() => setSelectedSystem(null)}
         onSystemUpdate={handleSystemUpdate}
+        onAddReview={handleAddReview}
       />
 
       {/* Footer */}

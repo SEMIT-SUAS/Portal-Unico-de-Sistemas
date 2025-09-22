@@ -1,33 +1,21 @@
-import { DigitalSystem, departmentCategories } from "../data/systems";
-import { BarChart3, Users, Building2, TrendingUp } from "lucide-react";
+import { DigitalSystem } from "../data/systems";
+import { BarChart3, Users, TrendingUp } from "lucide-react";
 
 interface DashboardProps {
   systems: DigitalSystem[];
+  stats: {
+    totalSystems: number;
+    totalDownloads: number;
+    totalUsers: number;
+    averageRating: number;
+    systemsByDepartment: Record<string, number>;
+  };
 }
 
-export function Dashboard({ systems }: DashboardProps) {
-  // Contar total de sistemas
-  const totalSystems = systems.length;
-
-  // Contar sistemas por secretaria/órgão
-  const systemsByDepartment = {
-    'saude': systems.filter(s => s.responsibleSecretary.includes('SEMUS')).length,
-    'educacao': systems.filter(s => s.responsibleSecretary.includes('SEMED')).length,
-    'assistencia-social': systems.filter(s => s.responsibleSecretary.includes('SEMAS')).length,
-    'meio-ambiente': systems.filter(s => s.responsibleSecretary.includes('SEMAPA')).length,
-    'fazenda-financas': systems.filter(s => s.responsibleSecretary.includes('SEMFAZ')).length,
-    'planejamento': systems.filter(s => s.responsibleSecretary.includes('SEPLAN')).length,
-    'tecnologia': systems.filter(s => s.responsibleSecretary.includes('SEMIT')).length,
-    'transito-transporte': systems.filter(s => s.responsibleSecretary.includes('SEMTT')).length,
-    'cultura': systems.filter(s => s.responsibleSecretary.includes('SECULT')).length,
-    'urbanismo': systems.filter(s => s.responsibleSecretary.includes('SEMURH')).length
-  };
+export function Dashboard({ systems, stats }: DashboardProps) {
+  const { totalSystems, totalDownloads, averageRating, systemsByDepartment } = stats;
 
   // Estatísticas gerais
-  const totalDownloads = systems.reduce((sum, system) => sum + (system.downloads || 0), 0);
-  const avgRating = systems.length > 0 
-    ? systems.reduce((sum, system) => sum + (system.rating || 0), 0) / systems.length 
-    : 0;
   const totalReviews = systems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0);
 
   return (
@@ -67,7 +55,7 @@ export function Dashboard({ systems }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Avaliação Média</p>
-              <p className="text-3xl font-bold text-yellow-700">{avgRating.toFixed(1)}</p>
+              <p className="text-3xl font-bold text-yellow-700">{averageRating.toFixed(1)}</p>
             </div>
             <div className="p-3 bg-yellow-100 rounded-full">
               <div className="h-6 w-6 text-yellow-600 flex items-center justify-center">⭐</div>
@@ -86,11 +74,21 @@ export function Dashboard({ systems }: DashboardProps) {
             </div>
           </div>
         </div>
-      
-        
-        {Object.values(systemsByDepartment).every(count => count === 0) && (
-          <p className="text-gray-500 text-center py-4">Nenhum sistema encontrado</p>
-        )}
+      </div>
+
+      {/* Estatísticas por departamento */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Sistemas por Secretaria/Órgão</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {Object.entries(systemsByDepartment).map(([key, count]) => (
+            count > 0 && (
+              <div key={key} className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-600 capitalize">{key}</p>
+                <p className="text-2xl font-bold text-blue-700">{count}</p>
+              </div>
+            )
+          ))}
+        </div>
       </div>
     </div>
   );
