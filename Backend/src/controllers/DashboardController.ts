@@ -1,18 +1,18 @@
+// src/controllers/DashboardController.ts
 import { Request, Response } from 'express';
 import { StatsModel } from '../models/StatsModel';
 import { SystemModel } from '../models/SystemModel';
-import pool from '../config/database'; // Importe o pool diretamente
+import pool from '../config/database';
 
 export class DashboardController {
   // Obter estatísticas do dashboard
   static async getDashboardStats(req: Request, res: Response) {
     let client;
     try {
-      client = await pool.connect(); // Use pool.connect() em vez de getConnection()
+      client = await pool.connect();
       const stats = await StatsModel.getDashboardStats();
       const departmentStats = await StatsModel.getDepartmentStats();
       
-      // Obter contagem por departamento
       const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
       
       res.json({
@@ -35,13 +35,74 @@ export class DashboardController {
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {
-      if (client) {
-        client.release(); // Use release() em vez de connection.release()
-      }
+      if (client) client.release();
     }
   }
 
-  // Métodos auxiliares atualizados para PostgreSQL
+  // Obter dados para gráficos
+  static async getDashboardCharts(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      const [departmentStats, categoryStats, ratingDistribution] = await Promise.all([
+        StatsModel.getDepartmentStats(),
+        SystemModel.countByCategory(),
+        DashboardController.getRatingDistribution()
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          byDepartment: departmentStats,
+          byCategory: categoryStats,
+          ratingDistribution
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard charts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar dados dos gráficos',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // Obter dados para cards
+  static async getDashboardCards(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const stats = await StatsModel.getDashboardStats();
+      const totalReviews = await DashboardController.getTotalReviews();
+      const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
+
+      res.json({
+        success: true,
+        data: {
+          totalSystems: stats.totalSystems,
+          totalDownloads: stats.totalDownloads,
+          averageRating: stats.averageRating,
+          totalReviews,
+          systemsByDepartment
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard cards:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar cards do dashboard',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // Métodos auxiliares
   private static async getSystemsByDepartmentCount(): Promise<Record<string, number>> {
     let client;
     try {
@@ -70,17 +131,9 @@ export class DashboardController {
       const result = await client.query(query);
       
       const formattedResult: Record<string, number> = {
-        'saude': 0,
-        'educacao': 0,
-        'assistencia-social': 0,
-        'meio-ambiente': 0,
-        'fazenda-financas': 0,
-        'planejamento': 0,
-        'tecnologia': 0,
-        'transito-transporte': 0,
-        'cultura': 0,
-        'urbanismo': 0,
-        'outros': 0
+        'saude': 0, 'educacao': 0, 'assistencia-social': 0, 'meio-ambiente': 0,
+        'fazenda-financas': 0, 'planejamento': 0, 'tecnologia': 0, 
+        'transito-transporte': 0, 'cultura': 0, 'urbanismo': 0, 'outros': 0
       };
 
       result.rows.forEach((row: any) => {
@@ -94,22 +147,12 @@ export class DashboardController {
     } catch (error) {
       console.error('Error counting systems by department:', error);
       return {
-        'saude': 0,
-        'educacao': 0,
-        'assistencia-social': 0,
-        'meio-ambiente': 0,
-        'fazenda-financas': 0,
-        'planejamento': 0,
-        'tecnologia': 0,
-        'transito-transporte': 0,
-        'cultura': 0,
-        'urbanismo': 0,
-        'outros': 0
+        'saude': 0, 'educacao': 0, 'assistencia-social': 0, 'meio-ambiente': 0,
+        'fazenda-financas': 0, 'planejamento': 0, 'tecnologia': 0,
+        'transito-transporte': 0, 'cultura': 0, 'urbanismo': 0, 'outros': 0
       };
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
@@ -124,9 +167,7 @@ export class DashboardController {
       console.error('Error getting total reviews:', error);
       return 0;
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
@@ -162,74 +203,7 @@ export class DashboardController {
       console.error('Error getting rating distribution:', error);
       return [];
     } finally {
-      if (client) {
-        client.release();
-      }
-    }
-  }
-
-  // Atualize também os outros métodos getDashboardCharts e getDashboardCards
-  static async getDashboardCharts(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const [departmentStats, categoryStats, ratingDistribution] = await Promise.all([
-        StatsModel.getDepartmentStats(),
-        SystemModel.countByCategory(),
-        DashboardController.getRatingDistribution()
-      ]);
-
-      res.json({
-        success: true,
-        data: {
-          byDepartment: departmentStats,
-          byCategory: categoryStats,
-          ratingDistribution
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard charts:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao carregar dados dos gráficos',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-    } finally {
-      if (client) {
-        client.release();
-      }
-    }
-  }
-
-  static async getDashboardCards(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const stats = await StatsModel.getDashboardStats();
-      const totalReviews = await DashboardController.getTotalReviews();
-      const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
-
-      res.json({
-        success: true,
-        data: {
-          totalSystems: stats.totalSystems,
-          totalDownloads: stats.totalDownloads,
-          averageRating: stats.averageRating,
-          totalReviews,
-          systemsByDepartment
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard cards:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao carregar cards do dashboard',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-    } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 }

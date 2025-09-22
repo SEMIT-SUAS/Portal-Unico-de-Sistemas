@@ -1,16 +1,19 @@
+// src/config/database.ts
 import { Pool, PoolConfig } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Configuração do pool de conexões
 const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'PUS', // Nome do seu banco
+  database: process.env.DB_NAME || 'PUS',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
-  max: 20, // máximo de clientes no pool
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  // SSL pode ser necessário em produção
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 };
 

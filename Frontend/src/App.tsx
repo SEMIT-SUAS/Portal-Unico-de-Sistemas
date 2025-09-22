@@ -6,7 +6,7 @@ import { FeaturedSystems } from "./components/FeaturedSystems";
 import { SystemCard } from "./components/SystemCard";
 import { SystemModal } from "./components/SystemModal";
 import { useSystems, useDashboard } from "./hooks/useSystems";
-import { systemService } from "./services/api";
+import { systemService } from "./services/api.ts";
 import { DigitalSystem, categories, departmentCategories } from "./data/systems";
 
 export default function App() {

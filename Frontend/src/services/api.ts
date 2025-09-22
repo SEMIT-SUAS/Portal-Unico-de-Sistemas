@@ -1,8 +1,7 @@
-// src/services/api.ts
 import axios from 'axios';
 
-// Para o backend, usamos a URL interna
-const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
+// PARA FRONTEND: Use import.meta.env (Vite) em vez de process.env
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,14 +11,15 @@ const api = axios.create({
   },
 });
 
-// Interceptor para logging de requests
+// Interceptor para requests (apenas logging no dev)
 api.interceptors.request.use(
   (config) => {
-    console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    if (import.meta.env.DEV) {
+      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -32,13 +32,11 @@ api.interceptors.response.use(
   (error) => {
     console.error('❌ API Error:', error.response?.data || error.message);
     
-    // Tratamento de erro mais robusto
+    // Tratamento de erros específicos
     if (error.code === 'ECONNREFUSED') {
-      error.message = 'Servidor indisponível. Verifique se a API está rodando.';
+      error.message = 'Servidor indisponível. Verifique se o backend está rodando.';
     } else if (error.response?.status === 404) {
       error.message = 'Recurso não encontrado.';
-    } else if (error.response?.status >= 500) {
-      error.message = 'Erro interno do servidor.';
     }
     
     return Promise.reject(error);
@@ -67,16 +65,6 @@ export const categoryService = {
   getAll: () => api.get('/categories'),
   getDepartments: () => api.get('/categories/departments'),
   getSecretaries: () => api.get('/categories/secretaries'),
-};
-
-// Função para testar a conexão
-export const testConnection = async () => {
-  try {
-    const response = await api.get('/health');
-    return { success: true, data: response.data };
-  } catch (error) {
-    return { success: false, error };
-  }
 };
 
 export default api;
