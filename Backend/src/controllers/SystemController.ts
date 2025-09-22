@@ -1,3 +1,4 @@
+// src/controllers/SystemController.ts
 import { Request, Response } from 'express';
 import { SystemModel } from '../models/SystemModel';
 
@@ -5,11 +6,22 @@ export class SystemController {
   // Obter todos os sistemas
   static async getAllSystems(req: Request, res: Response) {
     try {
-      const systems = await SystemModel.findAll();
+      const { category, department, search, isNew, isHighlight } = req.query;
+      
+      const filters = {
+        category: category as string,
+        department: department as string,
+        search: search as string,
+        isNew: isNew ? isNew === 'true' : undefined,
+        isHighlight: isHighlight ? isHighlight === 'true' : undefined
+      };
+
+      const systems = await SystemModel.findAll(filters);
       res.json({
         success: true,
         data: systems,
-        count: systems.length
+        count: systems.length,
+        filters
       });
     } catch (error) {
       console.error('Error fetching systems:', error);
@@ -148,6 +160,13 @@ export class SystemController {
         });
       }
 
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: 'A avaliação deve ser entre 1 e 5'
+        });
+      }
+
       await SystemModel.addReview(id, {
         userName,
         rating,
@@ -165,6 +184,44 @@ export class SystemController {
       res.status(500).json({
         success: false,
         message: 'Erro ao adicionar avaliação',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  }
+
+  // Obter sistemas em destaque
+  static async getHighlightedSystems(req: Request, res: Response) {
+    try {
+      const systems = await SystemModel.findHighlighted();
+      res.json({
+        success: true,
+        data: systems,
+        count: systems.length
+      });
+    } catch (error) {
+      console.error('Error fetching highlighted systems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar sistemas em destaque',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  }
+
+  // Obter sistemas novos
+  static async getNewSystems(req: Request, res: Response) {
+    try {
+      const systems = await SystemModel.findNewSystems();
+      res.json({
+        success: true,
+        data: systems,
+        count: systems.length
+      });
+    } catch (error) {
+      console.error('Error fetching new systems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar sistemas novos',
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }

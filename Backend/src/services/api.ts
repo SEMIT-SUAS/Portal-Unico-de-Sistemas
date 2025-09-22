@@ -1,6 +1,7 @@
+// src/services/api.ts
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,21 +13,21 @@ const api = axios.create({
 
 // Interceptor para logging de requests
 api.interceptors.request.use(
-  (config: { method: string; url: any; }) => {
+  (config) => {
     console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
-  (error: any) => {
+  (error) => {
     return Promise.reject(error);
   }
 );
 
 // Interceptor para responses
 api.interceptors.response.use(
-  (response: any) => {
+  (response) => {
     return response;
   },
-  (error: { response: { data: any; }; message: any; }) => {
+  (error) => {
     console.error('❌ API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }

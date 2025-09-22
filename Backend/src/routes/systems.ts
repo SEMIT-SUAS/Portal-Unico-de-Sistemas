@@ -3,8 +3,14 @@ import { SystemController } from '../controllers/SystemController';
 
 const router = express.Router();
 
-// GET /api/systems - Listar todos os sistemas
+// GET /api/systems - Listar todos os sistemas (com filtros opcionais)
 router.get('/', SystemController.getAllSystems);
+
+// GET /api/systems/highlighted - Sistemas em destaque
+router.get('/highlighted', SystemController.getHighlightedSystems);
+
+// GET /api/systems/new - Sistemas novos
+router.get('/new', SystemController.getNewSystems);
 
 // GET /api/systems/:id - Obter sistema por ID
 router.get('/:id', SystemController.getSystemById);
