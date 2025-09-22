@@ -8,5 +8,9 @@
     "db:test": "ts-node scripts/testConnection.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2"
   }
 }
