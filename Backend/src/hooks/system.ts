@@ -1,6 +1,6 @@
 // src/hooks/system.ts
 import { systemService, dashboardService } from '../services/api';
-import { DigitalSystem } from '../types';
+import { ApiDigitalSystem } from '../types';
 
 export interface DashboardStats {
   totalSystems: number;
@@ -10,58 +10,85 @@ export interface DashboardStats {
   systemsByDepartment: Record<string, number>;
 }
 
-// Se você quer usar isso no backend, provavelmente são funções utilitárias, não hooks React
-export class SystemHooks {
-  static async useSystems() {
+// Utilitários para sistemas
+export const SystemHooks = {
+  async fetchSystems(filters?: any) {
     try {
       const response = await systemService.getAll();
       return {
-        systems: response.data.data,
+        success: true,
+        data: response.data.data,
         error: null
       };
-    } catch (err: any) {
-      console.error('Error fetching systems:', err);
+    } catch (error: any) {
+      console.error('Error fetching systems:', error);
       return {
-        systems: [],
-        error: err.response?.data?.message || 'Erro ao carregar sistemas'
+        success: false,
+        data: [],
+        error: error.response?.data?.message || 'Erro ao carregar sistemas'
       };
     }
-  }
+  },
 
-  static async useDashboard() {
+  async fetchSystemById(id: number) {
     try {
-      const response = await dashboardService.getStats();
+      const response = await systemService.getById(id);
       return {
-        stats: response.data.data,
+        success: true,
+        data: response.data.data,
         error: null
       };
-    } catch (err: any) {
-      console.error('Error fetching dashboard stats:', err);
+    } catch (error: any) {
+      console.error('Error fetching system:', error);
       return {
-        stats: null,
-        error: err.response?.data?.message || 'Erro ao carregar dashboard'
+        success: false,
+        data: null,
+        error: error.response?.data?.message || 'Erro ao carregar sistema'
       };
     }
-  }
-}
-
-// Ou se preferir funções separadas:
-export const fetchSystems = async () => {
-  try {
-    const response = await systemService.getAll();
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching systems:', error);
-    throw error;
   }
 };
 
-export const fetchDashboardStats = async () => {
-  try {
-    const response = await dashboardService.getStats();
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    throw error;
+// Utilitários para dashboard
+export const DashboardHooks = {
+  async fetchDashboardStats() {
+    try {
+      const response = await dashboardService.getStats();
+      return {
+        success: true,
+        data: response.data.data,
+        error: null
+      };
+    } catch (error: any) {
+      console.error('Error fetching dashboard stats:', error);
+      return {
+        success: false,
+        data: null,
+        error: error.response?.data?.message || 'Erro ao carregar dashboard'
+      };
+    }
+  },
+
+  async fetchDashboardCharts() {
+    try {
+      const response = await dashboardService.getCharts();
+      return {
+        success: true,
+        data: response.data.data,
+        error: null
+      };
+    } catch (error: any) {
+      console.error('Error fetching dashboard charts:', error);
+      return {
+        success: false,
+        data: null,
+        error: error.response?.data?.message || 'Erro ao carregar gráficos'
+      };
+    }
   }
+};
+
+export default {
+  SystemHooks,
+  DashboardHooks
 };

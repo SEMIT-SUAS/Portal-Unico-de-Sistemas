@@ -13,7 +13,6 @@ export class DashboardController {
       const stats = await StatsModel.getDashboardStats();
       const departmentStats = await StatsModel.getDepartmentStats();
       
-      // Obter contagem por departamento
       const systemsByDepartment = await DashboardController.getSystemsByDepartmentCount();
       
       res.json({
@@ -36,13 +35,11 @@ export class DashboardController {
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
-  // Dados para gráficos
+  // Obter dados para gráficos
   static async getDashboardCharts(req: Request, res: Response) {
     let client;
     try {
@@ -70,13 +67,11 @@ export class DashboardController {
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
-  // Dados para cards
+  // Obter dados para cards
   static async getDashboardCards(req: Request, res: Response) {
     let client;
     try {
@@ -103,13 +98,11 @@ export class DashboardController {
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
-  // Métodos auxiliares atualizados para PostgreSQL
+  // Métodos auxiliares
   private static async getSystemsByDepartmentCount(): Promise<Record<string, number>> {
     let client;
     try {
@@ -138,17 +131,9 @@ export class DashboardController {
       const result = await client.query(query);
       
       const formattedResult: Record<string, number> = {
-        'saude': 0,
-        'educacao': 0,
-        'assistencia-social': 0,
-        'meio-ambiente': 0,
-        'fazenda-financas': 0,
-        'planejamento': 0,
-        'tecnologia': 0,
-        'transito-transporte': 0,
-        'cultura': 0,
-        'urbanismo': 0,
-        'outros': 0
+        'saude': 0, 'educacao': 0, 'assistencia-social': 0, 'meio-ambiente': 0,
+        'fazenda-financas': 0, 'planejamento': 0, 'tecnologia': 0, 
+        'transito-transporte': 0, 'cultura': 0, 'urbanismo': 0, 'outros': 0
       };
 
       result.rows.forEach((row: any) => {
@@ -162,22 +147,12 @@ export class DashboardController {
     } catch (error) {
       console.error('Error counting systems by department:', error);
       return {
-        'saude': 0,
-        'educacao': 0,
-        'assistencia-social': 0,
-        'meio-ambiente': 0,
-        'fazenda-financas': 0,
-        'planejamento': 0,
-        'tecnologia': 0,
-        'transito-transporte': 0,
-        'cultura': 0,
-        'urbanismo': 0,
-        'outros': 0
+        'saude': 0, 'educacao': 0, 'assistencia-social': 0, 'meio-ambiente': 0,
+        'fazenda-financas': 0, 'planejamento': 0, 'tecnologia': 0,
+        'transito-transporte': 0, 'cultura': 0, 'urbanismo': 0, 'outros': 0
       };
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
@@ -192,9 +167,7 @@ export class DashboardController {
       console.error('Error getting total reviews:', error);
       return 0;
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 
@@ -230,9 +203,7 @@ export class DashboardController {
       console.error('Error getting rating distribution:', error);
       return [];
     } finally {
-      if (client) {
-        client.release();
-      }
+      if (client) client.release();
     }
   }
 }

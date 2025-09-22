@@ -9,8 +9,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Importar configurações DEPOIS do dotenv.config()
-import { config, corsOptions, initDatabase, validateConfig, pool } from './config';
-import routes from './routes';
+import { config, validateConfig } from './config/app';
+import { corsOptions } from './config/cors';
+import { initDatabase } from './config/initDatabase';
+import pool from './config/database'; // ✅ CORRIGIDO - import default
+import routes from './routes/index';
 
 // Validar configurações
 validateConfig();
@@ -20,7 +23,7 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(morgan(config.logLevel));
+app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -41,26 +44,28 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    // Tratamento de erro seguro para TypeScript
-    let errorMessage = 'Erro desconhecido';
-    
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      errorMessage = error;
-    } else if (error && typeof error === 'object' && 'message' in error) {
-      errorMessage = String((error as any).message);
-    }
-    
     console.error('Health check error:', error);
-    
     res.status(500).json({ 
       status: 'Error', 
       database: 'Disconnected',
-      error: errorMessage,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
       timestamp: new Date().toISOString()
     });
   }
+});
+
+// Rota raiz
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'API do Portal Único de Sistemas',
+    version: '1.0.0',
+    endpoints: {
+      systems: '/api/systems',
+      dashboard: '/api/dashboard',
+      categories: '/api/categories',
+      health: '/health'
+    }
+  });
 });
 
 // Inicializar servidor
@@ -74,6 +79,7 @@ const startServer = async () => {
       console.log(`📊 Ambiente: ${config.nodeEnv}`);
       console.log(`🗄️  Banco de dados: ${config.database.name}`);
       console.log(`🌐 URL: http://localhost:${config.port}`);
+      console.log(`🔍 Health check: http://localhost:${config.port}/health`);
     });
   } catch (error) {
     console.error('❌ Falha ao iniciar servidor:', error);

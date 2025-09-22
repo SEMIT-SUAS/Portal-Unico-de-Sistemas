@@ -2,7 +2,6 @@
 import pool from '../config/database';
 
 export class CategoryModel {
-  // Obter todas as categorias
   static async findAll() {
     const query = `SELECT * FROM categories ORDER BY name`;
     
@@ -15,7 +14,6 @@ export class CategoryModel {
     }
   }
 
-  // Obter todas as categorias de departamento
   static async findAllDepartments() {
     const query = `SELECT * FROM department_categories ORDER BY name`;
     
@@ -28,7 +26,6 @@ export class CategoryModel {
     }
   }
 
-  // Obter todas as secretarias
   static async findAllSecretaries() {
     const query = `SELECT * FROM secretaries ORDER BY name`;
     

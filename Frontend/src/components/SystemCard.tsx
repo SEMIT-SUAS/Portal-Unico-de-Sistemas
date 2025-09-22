@@ -58,7 +58,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                 {system.rating && (
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span>{system.rating.toFixed(1)}</span>
+                    <span>{system.rating ? Number(system.rating).toFixed(1) : '0.0'}</span>
                     {system.reviewsCount && (
                       <span className="text-gray-400">({system.reviewsCount})</span>
                     )}
