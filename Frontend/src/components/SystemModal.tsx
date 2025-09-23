@@ -30,11 +30,16 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     return downloads.toLocaleString('pt-BR');
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: any) => {
+    // Converte para número e trata valores inválidos
+    const numericRating = Number(rating);
+    const validRating = !isNaN(numericRating) ? Math.max(0, Math.min(5, numericRating)) : 0;
+    const floorRating = Math.floor(validRating);
+    
     return Array.from({ length: 5 }, (_, i) => (
       <Star 
         key={i} 
-        className={`h-4 w-4 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+        className={`h-4 w-4 ${i < floorRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
       />
     ));
   };
@@ -113,17 +118,21 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 
                 {/* Rating and Downloads Stats */}
                 <div className="flex items-center gap-6 mt-3">
-                  {system.rating && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        {renderStars(system.rating)}
-                      </div>
-                      <span className="font-semibold">{system.rating.toFixed(1)}</span>
-                      {system.reviewsCount && (
-                        <span className="text-gray-500 text-sm">({system.reviewsCount} avaliações)</span>
-                      )}
+                  {/* Corrigido: sempre mostra o rating, mesmo que seja 0 */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {renderStars(system.rating)}
                     </div>
-                  )}
+                    <span className="font-semibold">
+                      {system.rating !== null && system.rating !== undefined 
+                        ? Number(system.rating).toFixed(1) 
+                        : '0.0'
+                      }
+                    </span>
+                    {system.reviewsCount && (
+                      <span className="text-gray-500 text-sm">({system.reviewsCount} avaliações)</span>
+                    )}
+                  </div>
                   
                   {system.downloads && (
                     <div className="flex items-center gap-2">
