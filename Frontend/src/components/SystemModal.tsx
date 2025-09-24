@@ -30,16 +30,19 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     return downloads.toLocaleString('pt-BR');
   };
 
-  const renderStars = (rating: any) => {
-    // Converte para número e trata valores inválidos
-    const numericRating = Number(rating);
-    const validRating = !isNaN(numericRating) ? Math.max(0, Math.min(5, numericRating)) : 0;
-    const floorRating = Math.floor(validRating);
-    
+  // Corrigir: garantir que rating seja sempre um número
+  const getRatingNumber = (rating: any): number => {
+    if (typeof rating === 'number') return rating;
+    if (typeof rating === 'string') return parseFloat(rating) || 0;
+    return 0;
+  };
+
+  const renderStars = (rating: number) => {
+    const numericRating = getRatingNumber(rating);
     return Array.from({ length: 5 }, (_, i) => (
       <Star 
         key={i} 
-        className={`h-4 w-4 ${i < floorRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+        className={`h-4 w-4 ${i < Math.floor(numericRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
       />
     ));
   };
@@ -60,7 +63,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     const currentReviews = system.userReviews || [];
     const updatedReviews = [newReview, ...currentReviews];
     
-    // Recalculate rating
+    // Recalculate rating - garantir que seja número
     const totalRating = updatedReviews.reduce((sum, review) => sum + review.rating, 0);
     const newRating = totalRating / updatedReviews.length;
 
@@ -83,8 +86,16 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     });
   };
 
+  // Função simplificada para verificar URL válida
+  const isValidUrl = (url: string | undefined) => {
+    return url && url !== '#' && (url.startsWith('http://') || url.startsWith('https://'));
+  };
+
   const displayedReviews = system.userReviews?.slice(0, 3) || [];
   const hasMoreReviews = (system.userReviews?.length || 0) > 3;
+
+  // Obter rating numérico seguro
+  const safeRating = getRatingNumber(system.rating);
 
   return (
     <>
@@ -118,21 +129,17 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 
                 {/* Rating and Downloads Stats */}
                 <div className="flex items-center gap-6 mt-3">
-                  {/* Corrigido: sempre mostra o rating, mesmo que seja 0 */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      {renderStars(system.rating)}
+                  {safeRating > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {renderStars(safeRating)}
+                      </div>
+                      <span className="font-semibold">{safeRating.toFixed(1)}</span>
+                      {system.reviewsCount && (
+                        <span className="text-gray-500 text-sm">({system.reviewsCount} avaliações)</span>
+                      )}
                     </div>
-                    <span className="font-semibold">
-                      {system.rating !== null && system.rating !== undefined 
-                        ? Number(system.rating).toFixed(1) 
-                        : '0.0'
-                      }
-                    </span>
-                    {system.reviewsCount && (
-                      <span className="text-gray-500 text-sm">({system.reviewsCount} avaliações)</span>
-                    )}
-                  </div>
+                  )}
                   
                   {system.downloads && (
                     <div className="flex items-center gap-2">
@@ -187,15 +194,16 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* Action Buttons - Moved before About System */}
+            {/* Action Buttons - SIMPLIFICADO */}
             <div className="flex gap-3">
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
                 onClick={() => {
-                  if (system.accessUrl && system.accessUrl !== '#') {
-                    window.open(system.accessUrl, '_blank');
+                  if (isValidUrl(system.accessUrl)) {
+                    window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
                   }
                 }}
+                disabled={!isValidUrl(system.accessUrl)}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Acessar Sistema
@@ -205,10 +213,11 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 <Button 
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   onClick={() => {
-                    if (system.pwaUrl && system.pwaUrl !== '#') {
-                      window.open(system.pwaUrl, '_blank');
+                    if (isValidUrl(system.pwaUrl)) {
+                      window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
                     }
                   }}
+                  disabled={!isValidUrl(system.pwaUrl)}
                 >
                   <Smartphone className="h-4 w-4 mr-2" />
                   Baixar App (PWA)
