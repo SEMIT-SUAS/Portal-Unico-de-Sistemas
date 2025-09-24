@@ -14,6 +14,7 @@ export class SystemModel {
     let query = `
       SELECT 
         ds.*,
+        ds.developer,
         s.name as secretary_name,
         json_agg(DISTINCT sf.feature) as features,
         json_agg(
@@ -90,6 +91,7 @@ export class SystemModel {
     const query = `
       SELECT 
         ds.*,
+        ds.developer,
         s.name as secretary_name,
         json_agg(DISTINCT sf.feature) as features,
         json_agg(
@@ -300,7 +302,8 @@ export class SystemModel {
       pwaUrl: row.pwa_url,
       mainFeatures: row.features || [],
       userReviews: (row.reviews || []).filter((r: any) => r.id !== null),
-      secretaryName: row.secretary_name
+      secretaryName: row.secretary_name,
+      developer: row.developer
     };
   }
 }

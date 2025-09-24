@@ -118,4 +118,5 @@ export interface ApiDigitalSystem {
   mainFeatures: string[];
   userReviews: UserReview[];
   secretaryName: string;
+  developer?: string;
 }

@@ -19,6 +19,7 @@ export interface DigitalSystem {
   userReviews?: UserReview[];
   hasPWA?: boolean;
   pwaUrl?: string;
+  developer?: string;
 }
 
 export interface UserReview {
@@ -53,6 +54,7 @@ export const digitalSystems: DigitalSystem[] = [
     reviewsCount: 45,
     hasPWA: true,
     pwaUrl: 'https://sae.prefeituradesaoluis.com.br/app',
+    developer: 'SEMUS - Equipe de Desenvolvimento ',
     userReviews: [
       {
         id: '1',
