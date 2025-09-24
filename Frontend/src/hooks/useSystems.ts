@@ -7,7 +7,10 @@ export interface DashboardStats {
   totalDownloads: number;
   totalUsers: number;
   averageRating: number;
+  totalReviews: number;
   systemsByDepartment: Record<string, number>;
+  isFiltered?: boolean;
+  lastUpdated: string;
 }
 
 // Hook para sistemas
@@ -41,17 +44,19 @@ export const useSystems = () => {
   return { systems, loading, error, refetch };
 };
 
-// Hook para dashboard
-export const useDashboard = () => {
+// Hook para dashboard - CORRIGIDO
+export const useDashboard = (selectedDepartment?: string | null) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = async (department?: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await dashboardService.getStats();
+      
+      // Use o dashboardService que já existe
+      const response = await dashboardService.getStats(department || undefined);
       setStats(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao carregar dashboard');
@@ -62,11 +67,11 @@ export const useDashboard = () => {
   };
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    fetchDashboardStats(selectedDepartment);
+  }, [selectedDepartment]); // Recarrega quando o departamento muda
 
   const refetch = () => {
-    fetchDashboardStats();
+    fetchDashboardStats(selectedDepartment);
   };
 
   return { stats, loading, error, refetch };
