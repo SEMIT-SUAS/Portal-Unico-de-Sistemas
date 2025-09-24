@@ -1,3 +1,4 @@
+import React from "react";
 import { ExternalLink, Download, Star } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -16,6 +17,15 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
       return `${(downloads / 1000).toFixed(1)}k`;
     }
     return downloads.toString();
+  };
+
+  const handleAccessClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (system.accessUrl && system.accessUrl !== '#') {
+      window.open(system.accessUrl, '_blank');
+    } else {
+      onSystemClick(system);
+    }
   };
 
   return (
@@ -55,15 +65,13 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                   </div>
                 )}
                 
-                {system.rating && (
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span>{system.rating ? Number(system.rating).toFixed(1) : '0.0'}</span>
-                    {system.reviewsCount && (
-                      <span className="text-gray-400">({system.reviewsCount})</span>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-1 text-xs text-gray-600">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span>{system.rating !== null && system.rating !== undefined ? Number(system.rating).toFixed(1) : '0.0'}</span>
+                  {system.reviewsCount && (
+                    <span className="text-gray-400">({system.reviewsCount})</span>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -71,14 +79,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
             <Button 
               size="sm"
               className="w-full bg-blue-600 hover:bg-blue-700 text-xs h-7"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (system.accessUrl && system.accessUrl !== '#') {
-                  window.open(system.accessUrl, '_blank');
-                } else {
-                  onSystemClick(system);
-                }
-              }}
+              onClick={handleAccessClick}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               Acessar
