@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare } from "lucide-react";
+import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -179,17 +179,14 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 </div>
               </div>
 
-              {system.usageCount && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Usuários Ativos</p>
-                    <p className="text-sm text-blue-600 font-semibold">
-                      {system.usageCount.toLocaleString('pt-BR')}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Code className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium">Desenvolvidor Por:</p>
+                  <p className="text-sm text-gray-600">{system.developer}</p>
                 </div>
-              )}
+              </div>
+              
             </div>
 
             <Separator />

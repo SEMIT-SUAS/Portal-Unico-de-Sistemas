@@ -4,6 +4,7 @@ export interface UserReview {
   rating: number;
   comment: string;
   date: string;
+  developer?: string;
 }
 
 export interface DigitalSystem {

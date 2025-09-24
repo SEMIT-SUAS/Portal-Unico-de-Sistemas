@@ -28,6 +28,7 @@ export interface DigitalSystem {
   userReviews?: UserReview[];
   hasPWA?: boolean;
   pwaUrl?: string;
+  developer?: string;
 }
 
 // Tipo para o banco de dados
@@ -77,6 +78,7 @@ export interface ApiDigitalSystem {
   mainFeatures: string[];
   userReviews: UserReview[];
   secretaryName: string;
+  developer?: string;
 }
 
 // Tipos para as categorias (para o CategoryNav)
