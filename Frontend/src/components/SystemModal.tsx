@@ -186,18 +186,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                   <p className="text-sm text-gray-600">{system.developer}</p>
                 </div>
               </div>
-
-              {system.usageCount && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Usuários Ativos</p>
-                    <p className="text-sm text-blue-600 font-semibold">
-                      {system.usageCount.toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
-              )}
+              
             </div>
 
             <Separator />
