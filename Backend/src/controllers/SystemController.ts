@@ -4,19 +4,27 @@ import { SystemModel } from '../models/SystemModel';
 import pool from '../config/database';
 
 export class SystemController {
-  // Obter todos os sistemas
+  // Obter todos os sistemas (ATUALIZADO)
   static async getAllSystems(req: Request, res: Response) {
     let client;
     try {
       client = await pool.connect();
-      const { category, department, search, isNew, isHighlight } = req.query;
+      const { 
+        category, 
+        department, 
+        search, 
+        isNew, 
+        isHighlight,
+        recentlyAdded // Novo parâmetro
+      } = req.query;
       
       const filters = {
         category: category as string,
         department: department as string,
         search: search as string,
         isNew: isNew ? isNew === 'true' : undefined,
-        isHighlight: isHighlight ? isHighlight === 'true' : undefined
+        isHighlight: isHighlight ? isHighlight === 'true' : undefined,
+        recentlyAdded: recentlyAdded ? recentlyAdded === 'true' : undefined // Novo filtro
       };
 
       const systems = await SystemModel.findAll(filters);
@@ -32,6 +40,35 @@ export class SystemController {
       res.status(500).json({
         success: false,
         message: 'Erro ao buscar sistemas',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // NOVA ROTA: Obter sistemas recentes
+  static async getRecentSystems(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const { limit } = req.query;
+      
+      const systems = await SystemModel.findRecentSystems(
+        limit ? parseInt(limit as string) : undefined
+      );
+      
+      res.json({
+        success: true,
+        data: systems,
+        count: systems.length,
+        limit: limit ? parseInt(limit as string) : 'default'
+      });
+    } catch (error) {
+      console.error('Error fetching recent systems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar sistemas recentes',
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {

@@ -5,32 +5,37 @@ import { DatabaseDigitalSystem, ApiDigitalSystem, UserReview } from '../types';
 export class SystemModel {
   // Buscar todos os sistemas com opções de filtro
   static async findAll(filters: {
-    category?: string;
-    department?: string;
-    search?: string;
-    isNew?: boolean;
-    isHighlight?: boolean;
-  } = {}): Promise<ApiDigitalSystem[]> {
-    let query = `
-      SELECT 
-        ds.*,
-        ds.developer,
-        s.name as secretary_name,
-        json_agg(DISTINCT sf.feature) as features,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', ur.id::text,
-            'userName', ur.user_name,
-            'rating', ur.rating,
-            'comment', ur.comment,
-            'date', ur.date::text
-          )
-        ) as reviews
-      FROM digital_systems ds
-      LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
-      LEFT JOIN system_features sf ON ds.id = sf.system_id
-      LEFT JOIN user_reviews ur ON ds.id = ur.system_id
-    `;
+  category?: string;
+  department?: string;
+  search?: string;
+  isNew?: boolean;
+  isHighlight?: boolean;
+  recentlyAdded?: boolean;
+} = {}): Promise<ApiDigitalSystem[]> {
+  let query = `
+    SELECT 
+      ds.*,
+      ds.developer,
+      s.name as secretary_name,
+      json_agg(DISTINCT sf.feature) as features,
+      json_agg(
+        DISTINCT jsonb_build_object(
+          'id', ur.id::text,
+          'userName', ur.user_name,
+          'rating', ur.rating,
+          'comment', ur.comment,
+          'date', ur.date::text
+        )
+      ) as reviews,
+      -- Calcular se é novo baseado na data
+      (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date,
+      -- CALCULO CORRIGIDO: usar DATE_PART em vez de EXTRACT
+      DATE_PART('day', CURRENT_DATE - ds.created_at) as days_since_creation
+    FROM digital_systems ds
+    LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
+    LEFT JOIN system_features sf ON ds.id = sf.system_id
+    LEFT JOIN user_reviews ur ON ds.id = ur.system_id
+  `;
     
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -54,9 +59,15 @@ export class SystemModel {
       params.push(`%${filters.search}%`);
     }
     
+    // Filtro por sistemas novos (baseado na data)
+    if (filters.recentlyAdded !== undefined) {
+      whereClauses.push(`ds.created_at >= CURRENT_DATE - INTERVAL '60 days'`);
+    }
+    
+    // Mantém o filtro antigo por compatibilidade
     if (filters.isNew !== undefined) {
       paramCount++;
-      whereClauses.push(`ds.is_new = $${paramCount}`);
+      whereClauses.push(`(ds.is_new = $${paramCount} OR ds.created_at >= CURRENT_DATE - INTERVAL '60 days')`);
       params.push(filters.isNew);
     }
     
@@ -77,8 +88,6 @@ export class SystemModel {
     
     try {
       const result = await pool.query(query, params);
-      
-      // Converter para o formato da API (compatível com o frontend)
       return result.rows.map((row: any) => this.mapToApiFormat(row));
     } catch (error) {
       console.error('Error fetching systems:', error);
@@ -102,7 +111,9 @@ export class SystemModel {
             'comment', ur.comment,
             'date', ur.date::text
           )
-        ) as reviews
+        ) as reviews,
+        EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE)) as days_since_creation,
+        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
       FROM digital_systems ds
       LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
       LEFT JOIN system_features sf ON ds.id = sf.system_id
@@ -137,9 +148,9 @@ export class SystemModel {
     return this.findAll({ isHighlight: true });
   }
 
-  // Buscar sistemas novos
+  // Buscar sistemas novos (agora baseado na data)
   static async findNewSystems(): Promise<ApiDigitalSystem[]> {
-    return this.findAll({ isNew: true });
+    return this.findAll({ recentlyAdded: true });
   }
 
   // Buscar sistemas por termo de pesquisa
@@ -147,7 +158,165 @@ export class SystemModel {
     return this.findAll({ search: query });
   }
 
-  // Contar sistemas por categoria (para o CategoryNav)
+  // NOVO: Buscar sistemas recentes (últimos 60 dias)
+  static async findRecentSystems(limit?: number): Promise<ApiDigitalSystem[]> {
+    let query = `
+      SELECT 
+        ds.*,
+        s.name as secretary_name,
+        json_agg(DISTINCT sf.feature) as features,
+        EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE)) as days_since_creation,
+        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
+      FROM digital_systems ds
+      LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
+      LEFT JOIN system_features sf ON ds.id = sf.system_id
+      WHERE ds.created_at >= CURRENT_DATE - INTERVAL '60 days'
+      GROUP BY ds.id, s.name
+      ORDER BY ds.created_at DESC
+    `;
+    
+    if (limit) {
+      query += ` LIMIT $1`;
+    }
+    
+    try {
+      const result = limit ? await pool.query(query, [limit]) : await pool.query(query);
+      return result.rows.map((row: any) => this.mapToApiFormat(row));
+    } catch (error) {
+      console.error('Error fetching recent systems:', error);
+      throw new Error('Failed to fetch recent systems');
+    }
+  }
+
+  // MÉTODO FALTANTE: Criar sistema
+  static async create(systemData: Omit<DatabaseDigitalSystem, 'id' | 'created_at' | 'updated_at'>): Promise<ApiDigitalSystem> {
+    const query = `
+      INSERT INTO digital_systems (
+        name, description, full_description, target_audience,
+        responsible_secretary, launch_year, category, is_highlight,
+        is_new, icon_url, access_url, usage_count, downloads,
+        rating, reviews_count, has_pwa, pwa_url, developer,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW())
+      RETURNING *
+    `;
+    
+    const values = [
+      systemData.name,
+      systemData.description,
+      systemData.full_description,
+      systemData.target_audience,
+      systemData.responsible_secretary,
+      systemData.launch_year,
+      systemData.category,
+      systemData.is_highlight || false,
+      true, // Sempre marcar como novo quando criar
+      systemData.icon_url,
+      systemData.access_url,
+      systemData.usage_count || 0,
+      systemData.downloads || 0,
+      systemData.rating || 0,
+      systemData.reviews_count || 0,
+      systemData.has_pwa || false,
+      systemData.pwa_url,
+    ];
+    
+    try {
+      const result = await pool.query(query, values);
+      return this.mapToApiFormat(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating system:', error);
+      throw new Error('Failed to create system');
+    }
+  }
+
+  // MÉTODO FALTANTE: Atualizar sistema
+  static async update(id: number, systemData: Partial<DatabaseDigitalSystem>): Promise<ApiDigitalSystem> {
+    const fields = [];
+    const values = [];
+    let paramCount = 0;
+
+    // Construir dinamicamente os campos a serem atualizados
+    Object.entries(systemData).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'id') {
+        paramCount++;
+        fields.push(`${key} = $${paramCount}`);
+        values.push(value);
+      }
+    });
+
+    // Sempre atualizar updated_at
+    paramCount++;
+    fields.push(`updated_at = $${paramCount}`);
+    values.push(new Date());
+
+    values.push(id);
+
+    const query = `
+      UPDATE digital_systems 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramCount + 1}
+      RETURNING *
+    `;
+    
+    try {
+      const result = await pool.query(query, values);
+      if (result.rows.length === 0) {
+        throw new Error('System not found');
+      }
+      return this.mapToApiFormat(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating system:', error);
+      throw new Error('Failed to update system');
+    }
+  }
+
+  // MÉTODO FALTANTE: Deletar sistema
+  static async delete(id: number): Promise<boolean> {
+    const query = 'DELETE FROM digital_systems WHERE id = $1';
+    
+    try {
+      const result = await pool.query(query, [id]);
+      return result.rowCount ? result.rowCount > 0 : false;
+    } catch (error) {
+      console.error('Error deleting system:', error);
+      throw new Error('Failed to delete system');
+    }
+  }
+
+  // MÉTODO FALTANTE: Atualizar estatísticas de uso
+  static async incrementUsage(systemId: number): Promise<void> {
+    const query = `
+      UPDATE digital_systems 
+      SET usage_count = usage_count + 1, updated_at = NOW()
+      WHERE id = $1
+    `;
+    
+    try {
+      await pool.query(query, [systemId]);
+    } catch (error) {
+      console.error('Error incrementing usage:', error);
+      throw new Error('Failed to increment usage');
+    }
+  }
+
+  // MÉTODO FALTANTE: Atualizar contador de downloads
+  static async incrementDownloads(systemId: number): Promise<void> {
+    const query = `
+      UPDATE digital_systems 
+      SET downloads = downloads + 1, updated_at = NOW()
+      WHERE id = $1
+    `;
+    
+    try {
+      await pool.query(query, [systemId]);
+    } catch (error) {
+      console.error('Error incrementing downloads:', error);
+      throw new Error('Failed to increment downloads');
+    }
+  }
+
+  // Contar sistemas por categoria
   static async countByCategory(): Promise<Record<string, number>> {
     const query = `
       SELECT category, COUNT(*) as count
@@ -167,7 +336,7 @@ export class SystemModel {
     }
   }
 
-  // Contar sistemas por departamento (para o Dashboard)
+  // Contar sistemas por departamento
   static async countByDepartment(): Promise<Record<string, number>> {
     const query = `
       SELECT 
@@ -201,7 +370,7 @@ export class SystemModel {
     }
   }
 
-  // Adicionar uma nova avaliação (para o RatingModal)
+  // Adicionar uma nova avaliação
   static async addReview(systemId: number, reviewData: {
     userName: string;
     rating: number;
@@ -215,7 +384,7 @@ export class SystemModel {
       latitude: number;
       longitude: number;
     };
-  }): Promise<void> {
+  }): Promise<boolean> {
     const client = await pool.connect();
     
     try {
@@ -228,12 +397,14 @@ export class SystemModel {
         RETURNING id
       `;
       
-      await client.query(reviewQuery, [
+      const reviewResult = await client.query(reviewQuery, [
         systemId,
         reviewData.userName,
         reviewData.rating,
         reviewData.comment
       ]);
+
+      const reviewId = reviewResult.rows[0].id;
 
       // Se houver dados demográficos, inserir em uma tabela separada
       if (reviewData.demographics) {
@@ -243,8 +414,7 @@ export class SystemModel {
         `;
         
         await client.query(demographicsQuery, [
-          // O ID da review seria retornado acima, mas para simplificar vamos usar uma abordagem diferente
-          // Em produção, você precisaria capturar o ID retornado da inserção anterior
+          reviewId,
           reviewData.demographics.cor,
           reviewData.demographics.sexo,
           reviewData.demographics.idade,
@@ -263,13 +433,14 @@ export class SystemModel {
           reviews_count = (
             SELECT COUNT(*) FROM user_reviews WHERE system_id = $1
           ),
-          updated_at = CURRENT_TIMESTAMP
+          updated_at = NOW()
         WHERE id = $1
       `;
       
       await client.query(updateSystemQuery, [systemId]);
 
       await client.query('COMMIT');
+      return true;
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error adding review:', error);
@@ -281,6 +452,9 @@ export class SystemModel {
 
   // Método para mapear do formato do banco para o formato da API
   private static mapToApiFormat(row: any): ApiDigitalSystem {
+    const isNewByDate = row.is_new_by_date;
+    const daysSinceCreation = row.days_since_creation;
+    
     return {
       id: row.id,
       name: row.name,
@@ -291,7 +465,7 @@ export class SystemModel {
       launchYear: row.launch_year,
       category: row.category,
       isHighlight: row.is_highlight,
-      isNew: row.is_new,
+      isNew: row.is_new || isNewByDate,
       iconUrl: row.icon_url,
       accessUrl: row.access_url,
       usageCount: row.usage_count,
@@ -303,7 +477,13 @@ export class SystemModel {
       mainFeatures: row.features || [],
       userReviews: (row.reviews || []).filter((r: any) => r.id !== null),
       secretaryName: row.secretary_name,
-      developer: row.developer
+      developer: row.developer,
+      // Novos campos para a funcionalidade de tag NOVO
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      daysSinceCreation: daysSinceCreation,
+      isNewByDate: isNewByDate,
+      daysRemaining: isNewByDate ? Math.max(0, 60 - (daysSinceCreation || 0)) : 0
     };
   }
 }
