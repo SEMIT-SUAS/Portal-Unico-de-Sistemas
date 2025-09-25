@@ -17,7 +17,7 @@ export default function App() {
   
   // Usar hook personalizado para buscar sistemas
   const { systems, loading, error, refetch } = useSystems();
-  const { stats, loading: statsLoading, error: statsError } = useDashboard();
+  const { stats, loading: statsLoading, error: statsError } = useDashboard(selectedDepartment);
 
   // Filter systems based on search, category, and department
   const filteredSystems = useMemo(() => {
@@ -80,17 +80,10 @@ export default function App() {
 
   const handleSystemUpdate = async (updatedSystem: DigitalSystem) => {
     try {
-      // Em uma aplicação real, você faria uma chamada PATCH para atualizar no backend
-      // Por enquanto, apenas atualizamos o estado local
       const updatedSystems = systems.map(system => 
         system.id === updatedSystem.id ? updatedSystem : system
       );
-      // Aqui você precisaria atualizar o estado dos sistemas
-      // Isso depende de como você está gerenciando o estado
-      
       console.log('System updated:', updatedSystem);
-      
-      // Recarregar os dados para garantir sincronização
       refetch();
     } catch (error) {
       console.error('Error updating system:', error);
@@ -100,7 +93,6 @@ export default function App() {
   const handleAddReview = async (systemId: number, ratingData: any) => {
     try {
       await systemService.addReview(systemId, ratingData);
-      // Recarregar os dados após adicionar a avaliação
       refetch();
     } catch (error) {
       console.error('Error adding review:', error);
@@ -113,6 +105,10 @@ export default function App() {
     setSelectedCategory(null);
     setSelectedDepartment(null);
   };
+
+  // Determinar quando mostrar o Dashboard
+  const shouldShowDashboard = !searchTerm && !selectedCategory;
+  const shouldShowFeaturedSystems = !searchTerm && !selectedCategory && !selectedDepartment;
 
   // Loading state
   if (loading) {
@@ -160,13 +156,24 @@ export default function App() {
         onDepartmentChange={setSelectedDepartment}
       />
 
-      {/* Dashboard - only show when no search/filter is active */}
-      {!searchTerm && !selectedCategory && !selectedDepartment && stats && (
-        <Dashboard systems={systems} stats={stats} />
+      {/* Dashboard - show when no search/category filter */}
+      {shouldShowDashboard && stats && (
+        <Dashboard 
+          systems={systems} 
+          stats={{
+            totalSystems: stats.totalSystems,
+            totalDownloads: stats.totalDownloads,
+            totalUsers: stats.totalUsers,
+            averageRating: stats.averageRating,
+            totalReviews: stats.totalReviews
+          }}
+          selectedDepartment={selectedDepartment}
+          departmentCategories={departmentCategories}
+        />
       )}
 
-      {/* Featured Systems - only show when no search/filter is active */}
-      {!searchTerm && !selectedCategory && !selectedDepartment && (
+      {/* Featured Systems - only show when no filters at all */}
+      {shouldShowFeaturedSystems && (
         <FeaturedSystems 
           systems={systems}
           onSystemClick={setSelectedSystem}

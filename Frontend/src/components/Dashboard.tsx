@@ -1,5 +1,6 @@
+// components/Dashboard.tsx
 import { DigitalSystem } from "../data/systems";
-import { BarChart3, Users, TrendingUp } from "lucide-react";
+import { Building, Users, Download, Star, MessageSquare } from "lucide-react";
 
 interface DashboardProps {
   systems: DigitalSystem[];
@@ -8,88 +9,162 @@ interface DashboardProps {
     totalDownloads: number;
     totalUsers: number;
     averageRating: number;
-    systemsByDepartment: Record<string, number>;
+    totalReviews: number;
   };
+  selectedDepartment: string | null;
+  departmentCategories: Record<string, string>;
 }
 
-export function Dashboard({ systems, stats }: DashboardProps) {
-  const { totalSystems, totalDownloads, averageRating, systemsByDepartment } = stats;
+export function Dashboard({ systems, stats, selectedDepartment, departmentCategories }: DashboardProps) {
+  // Filtrar sistemas pela secretaria selecionada
+  const filteredSystems = selectedDepartment 
+    ? systems.filter(system => {
+        const departmentMap: Record<string, string[]> = {
+          'saude': ['SEMUS'],
+          'educacao': ['SEMED'],
+          'assistencia-social': ['SEMAS'],
+          'meio-ambiente': ['SEMAPA'],
+          'fazenda-financas': ['SEMFAZ'],
+          'planejamento': ['SEPLAN'],
+          'tecnologia': ['SEMIT'],
+          'transito-transporte': ['SEMTT'],
+          'cultura': ['SECULT'],
+          'urbanismo': ['SEMURH']
+        };
+        
+        const relevantSecretaries = departmentMap[selectedDepartment] || [];
+        return relevantSecretaries.some(secretary => 
+          system.responsibleSecretary.includes(secretary)
+        );
+      })
+    : systems;
 
-  // Estatísticas gerais
-  const totalReviews = systems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0);
+  // Calcular estatísticas específicas da secretaria
+  const departmentStats = {
+    totalSystems: filteredSystems.length,
+    totalDownloads: filteredSystems.reduce((sum, system) => sum + (system.downloads || 0), 0),
+    totalUsers: filteredSystems.reduce((sum, system) => sum + (system.usageCount || 0), 0),
+    averageRating: filteredSystems.length > 0 
+      ? filteredSystems.reduce((sum, system) => sum + (system.rating || 0), 0) / filteredSystems.length 
+      : 0,
+    totalReviews: filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0)
+  };
+
+  const departmentName = selectedDepartment 
+    ? departmentCategories[selectedDepartment as keyof typeof departmentCategories] 
+    : "Todas as Secretarias";
+
+  // Array com as métricas na ordem solicitada
+  const metrics = [
+    {
+      key: 'totalSystems',
+      label: 'Total de Sistemas',
+      value: departmentStats.totalSystems,
+      icon: Building,
+      color: 'blue',
+      comparison: selectedDepartment ? `de ${stats.totalSystems} total` : undefined
+    },
+    {
+      key: 'totalUsers',
+      label: 'Total de Acessos',
+      value: departmentStats.totalUsers.toLocaleString(),
+      icon: Users,
+      color: 'green',
+      comparison: selectedDepartment && stats.totalUsers > 0 ? 
+        `${((departmentStats.totalUsers / stats.totalUsers) * 100).toFixed(1)}% do total` : undefined
+    },
+    {
+      key: 'totalDownloads',
+      label: 'Total de Downloads',
+      value: departmentStats.totalDownloads.toLocaleString(),
+      icon: Download,
+      color: 'purple',
+      comparison: selectedDepartment && stats.totalDownloads > 0 ? 
+        `${((departmentStats.totalDownloads / stats.totalDownloads) * 100).toFixed(1)}% do total` : undefined
+    },
+    {
+      key: 'averageRating',
+      label: 'Avaliação Média',
+      value: departmentStats.averageRating.toFixed(1),
+      icon: Star,
+      color: 'yellow',
+      comparison: selectedDepartment ? `${departmentStats.totalReviews} avaliações` : undefined
+    },
+    {
+      key: 'totalReviews',
+      label: 'Total de Avaliações',
+      value: departmentStats.totalReviews.toLocaleString(),
+      icon: MessageSquare,
+      color: 'indigo',
+      comparison: selectedDepartment && departmentStats.totalSystems > 0 ? 
+        `Média de ${Math.round(departmentStats.totalReviews / departmentStats.totalSystems)} por sistema` : undefined
+    }
+  ];
+
+  // Cores para os ícones e bordas
+  const colorClasses = {
+    blue: { border: 'border-blue-500', bg: 'bg-blue-100', text: 'text-blue-600' },
+    green: { border: 'border-green-500', bg: 'bg-green-100', text: 'text-green-600' },
+    purple: { border: 'border-purple-500', bg: 'bg-purple-100', text: 'text-purple-600' },
+    yellow: { border: 'border-yellow-500', bg: 'bg-yellow-100', text: 'text-yellow-600' },
+    indigo: { border: 'border-indigo-500', bg: 'bg-indigo-100', text: 'text-indigo-600' }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-blue-700 mb-2">Dashboard</h2>
-        <p className="text-gray-600">Estatísticas gerais do catálogo de sistemas digitais</p>
-      </div>
-
-      {/* Cards de estatísticas gerais */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total de Sistemas</p>
-              <p className="text-3xl font-bold text-blue-700">{totalSystems}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-            </div>
+      {/* Cabeçalho do Dashboard */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Dashboard - {departmentName}
+            </h2>
+            <p className="text-gray-600">
+              {selectedDepartment 
+                ? `Métricas específicas da ${departmentName}`
+                : "Visão geral do catálogo de sistemas digitais"
+              }
+            </p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Downloads</p>
-              <p className="text-3xl font-bold text-green-700">{totalDownloads.toLocaleString()}</p>
+          
+          {/* Badge indicador de filtro */}
+          {selectedDepartment && (
+            <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+              Filtrado por secretaria
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Avaliação Média</p>
-              <p className="text-3xl font-bold text-yellow-700">{averageRating.toFixed(1)}</p>
-            </div>
-            <div className="p-3 bg-yellow-100 rounded-full">
-              <div className="h-6 w-6 text-yellow-600 flex items-center justify-center">⭐</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Avaliações</p>
-              <p className="text-3xl font-bold text-purple-700">{totalReviews.toLocaleString()}</p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-full">
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Estatísticas por departamento */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Sistemas por Secretaria/Órgão</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {Object.entries(systemsByDepartment).map(([key, count]) => (
-            count > 0 && (
-              <div key={key} className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-600 capitalize">{key}</p>
-                <p className="text-2xl font-bold text-blue-700">{count}</p>
+      {/* Container único com as 5 métricas lado a lado */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {metrics.map((metric) => {
+            const IconComponent = metric.icon;
+            const colors = colorClasses[metric.color as keyof typeof colorClasses];
+            
+            return (
+              <div 
+                key={metric.key}
+                className="text-center"
+              >
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${colors.bg} mb-3`}>
+                  <IconComponent className={`h-6 w-6 ${colors.text}`} />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">{metric.label}</p>
+                <p className={`text-2xl font-bold text-gray-900 mb-1`}>
+                  {metric.value}
+                </p>
+                {metric.comparison && (
+                  <p className="text-xs text-gray-500">{metric.comparison}</p>
+                )}
               </div>
-            )
-          ))}
+            );
+          })}
         </div>
       </div>
+
+    
     </div>
   );
 }

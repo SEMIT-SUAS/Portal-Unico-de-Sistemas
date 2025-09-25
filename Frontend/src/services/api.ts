@@ -43,6 +43,17 @@ api.interceptors.response.use(
   }
 );
 
+// Interface para as estatísticas do dashboard
+export interface DashboardStats {
+  totalSystems: number;
+  totalDownloads: number;
+  totalUsers: number;
+  averageRating: number;
+  totalReviews: number;
+  isFiltered?: boolean;
+  lastUpdated: string;
+}
+
 // Serviços para sistemas
 export const systemService = {
   getAll: () => api.get('/systems'),
@@ -51,11 +62,24 @@ export const systemService = {
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),
   search: (query: string) => api.post('/systems/search', { query }),
   addReview: (id: number, reviewData: any) => api.post(`/systems/${id}/review`, reviewData),
+  
+  // Novo método para dashboard com suporte a filtro por departamento
+  getDashboardStats: (department?: string): Promise<{ data: DashboardStats }> => {
+    const url = department 
+      ? `/dashboard/stats?department=${encodeURIComponent(department)}`
+      : '/dashboard/stats';
+    return api.get(url);
+  },
 };
 
-// Serviços para dashboard
+// Serviços para dashboard (mantidos para compatibilidade)
 export const dashboardService = {
-  getStats: () => api.get('/dashboard/stats'),
+  getStats: (department?: string) => {
+    const url = department 
+      ? `/dashboard/stats?department=${encodeURIComponent(department)}`
+      : '/dashboard/stats';
+    return api.get(url);
+  },
   getCharts: () => api.get('/dashboard/charts'),
   getCards: () => api.get('/dashboard/cards'),
 };
