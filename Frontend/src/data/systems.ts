@@ -7,7 +7,7 @@ export interface DigitalSystem {
   responsibleSecretary: string;
   launchYear: number;
   mainFeatures: string[];
-  category: 'novidades' | 'destaques' | 'mais-usados' | 'cidadao' | 'interno' | 'por-secretaria';
+  category: 'novidades' | 'destaques' | 'mais-usados' | 'cidadao' | 'interno' | 'por-secretaria' | 'inativos'; // Adicione 'inativos'
   isHighlight?: boolean;
   isNew?: boolean;
   iconUrl?: string;
@@ -22,6 +22,7 @@ export interface DigitalSystem {
   developer?: string;
   createdAt: string;
   updatedAT: string;
+  isActive?: boolean; // Adicione esta propriedade
 }
 
 export interface UserReview {
@@ -218,7 +219,8 @@ export const categories = {
   'mais-usados': 'Mais Usados',
   'cidadao': 'Para o Cidadão',
   'interno': 'Para Uso Interno',
-  'por-secretaria': 'Por Secretaria/Órgão'
+  'por-secretaria': 'Por Secretaria/Órgão',
+  'inativos': 'Sistemas Inativos' // Adicione esta linha
 };
 
 export const departmentCategories = {

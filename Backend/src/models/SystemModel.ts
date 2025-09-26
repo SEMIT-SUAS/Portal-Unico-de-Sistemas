@@ -450,6 +450,8 @@ export class SystemModel {
     }
   }
 
+  
+
   // Método para mapear do formato do banco para o formato da API
   private static mapToApiFormat(row: any): ApiDigitalSystem {
     const isNewByDate = row.is_new_by_date;
