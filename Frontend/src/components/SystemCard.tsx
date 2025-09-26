@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { DigitalSystem } from "../data/systems";
-import { systemUtils } from "../utils/systemUtils"; // Importe o utilitário
+import { systemUtils } from "../utils/systemUtils";
 
 interface SystemCardProps {
   system: DigitalSystem;
@@ -13,12 +13,6 @@ interface SystemCardProps {
 }
 
 export function SystemCard({ system, onSystemClick }: SystemCardProps) {
-  // Verificar se o sistema é novo e calcular informações
-  const systemCreatedAt = system.createdAt || systemUtils.generateDemoDate(Math.random() * 365);
-  const isNew = systemUtils.isNewSystem(systemCreatedAt);
-  const daysRemaining = systemUtils.getDaysRemaining(systemCreatedAt);
-  const relativeTime = systemUtils.getRelativeTime(systemCreatedAt);
-
   const formatDownloads = (downloads: number) => {
     if (downloads >= 1000) {
       return `${(downloads / 1000).toFixed(1)}k`;
@@ -36,16 +30,8 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32 relative">
-      {/* Tag NOVO no canto superior direito */}
-      {isNew && (
-        <div className="absolute -top-2 -right-2 z-10">
-          <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-lg flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-            NOVO
-          </Badge>
-        </div>
-      )}
+    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32">
+      {/* REMOVIDA COMPLETAMENTE a div da tag NOVO */}
       
       <div className="h-full">
         <div className="flex h-full p-4">
@@ -66,17 +52,12 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                 {system.name}
               </CardTitle>
               
-              {/* Informações de data e status */}
+              {/* Informações de data */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                   <Calendar className="h-3 w-3" />
-                  <span>{relativeTime}</span>
+                  <span>{systemUtils.getRelativeTime(system.createdAt || systemUtils.generateDemoDate(10))}</span>
                 </div>
-                {isNew && (
-                  <Badge variant="outline" className="text-xs px-1.5 py-0 border-green-200 text-green-700 bg-green-50">
-                    {daysRemaining}d restantes
-                  </Badge>
-                )}
               </div>
               
               {/* Downloads e avaliação */}
