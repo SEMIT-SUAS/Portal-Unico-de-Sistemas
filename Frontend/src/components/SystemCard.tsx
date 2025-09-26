@@ -1,10 +1,11 @@
 import React from "react";
-import { ExternalLink, Download, Star } from "lucide-react";
+import { ExternalLink, Download, Star, Calendar } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { DigitalSystem } from "../data/systems";
+import { systemUtils } from "../utils/systemUtils"; // Importe o utilitário
 
 interface SystemCardProps {
   system: DigitalSystem;
@@ -12,6 +13,12 @@ interface SystemCardProps {
 }
 
 export function SystemCard({ system, onSystemClick }: SystemCardProps) {
+  // Verificar se o sistema é novo e calcular informações
+  const systemCreatedAt = system.createdAt || systemUtils.generateDemoDate(Math.random() * 365);
+  const isNew = systemUtils.isNewSystem(systemCreatedAt);
+  const daysRemaining = systemUtils.getDaysRemaining(systemCreatedAt);
+  const relativeTime = systemUtils.getRelativeTime(systemCreatedAt);
+
   const formatDownloads = (downloads: number) => {
     if (downloads >= 1000) {
       return `${(downloads / 1000).toFixed(1)}k`;
@@ -29,7 +36,17 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32">
+    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32 relative">
+      {/* Tag NOVO no canto superior direito */}
+      {isNew && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-lg flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+            NOVO
+          </Badge>
+        </div>
+      )}
+      
       <div className="h-full">
         <div className="flex h-full p-4">
           {/* Ícone no canto superior esquerdo */}
@@ -43,21 +60,27 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
           
           {/* Conteúdo à direita do ícone */}
           <div className="flex-1 ml-3 flex flex-col justify-between">
-            {/* Nome e badge no topo */}
+            {/* Nome no topo */}
             <div onClick={() => onSystemClick(system)} className="cursor-pointer">
-              <div className="flex items-start gap-2 mb-2">
-                <CardTitle className="text-sm leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors flex-1">
-                  {system.name}
-                </CardTitle>
-                {system.isNew && (
-                  <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 text-xs px-1.5 py-0.5 flex-shrink-0">
-                    NOVO
+              <CardTitle className="text-sm leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                {system.name}
+              </CardTitle>
+              
+              {/* Informações de data e status */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Calendar className="h-3 w-3" />
+                  <span>{relativeTime}</span>
+                </div>
+                {isNew && (
+                  <Badge variant="outline" className="text-xs px-1.5 py-0 border-green-200 text-green-700 bg-green-50">
+                    {daysRemaining}d restantes
                   </Badge>
                 )}
               </div>
               
               {/* Downloads e avaliação */}
-              <div className="flex items-center gap-4 mb-3">
+              <div className="flex items-center gap-4">
                 {system.downloads && (
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <Download className="h-3 w-3" />

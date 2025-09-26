@@ -20,6 +20,8 @@ export interface DigitalSystem {
   hasPWA?: boolean;
   pwaUrl?: string;
   developer?: string;
+  createdAt: string;
+  updatedAT: string;
 }
 
 export interface UserReview {

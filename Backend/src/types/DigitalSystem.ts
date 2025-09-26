@@ -119,4 +119,5 @@ export interface ApiDigitalSystem {
   userReviews: UserReview[];
   secretaryName: string;
   developer?: string;
+  daysRemaining: number;
 }

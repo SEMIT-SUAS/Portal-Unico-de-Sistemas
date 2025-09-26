@@ -15,7 +15,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
   const [currentNewIndex, setCurrentNewIndex] = useState(0);
   
-  const featuredSystems = systems.filter(system => system.isHighlight && !system.isNew);
+  const featuredSystems = systems.filter(system => system.isHighlight);
   const newSystems = systems.filter(system => system.isNew);
 
   useEffect(() => {

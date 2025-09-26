@@ -51,6 +51,7 @@ export interface DatabaseDigitalSystem {
   reviews_count?: number;
   has_pwa: boolean;
   pwa_url?: string;
+  developer: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -79,6 +80,11 @@ export interface ApiDigitalSystem {
   userReviews: UserReview[];
   secretaryName: string;
   developer?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  daysSinceCreation?: number;
+  isNewByDate?: boolean;
+  daysRemaining: number;
 }
 
 // Tipos para as categorias (para o CategoryNav)
