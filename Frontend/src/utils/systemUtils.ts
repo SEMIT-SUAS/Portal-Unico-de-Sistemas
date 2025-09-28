@@ -1,10 +1,14 @@
-// src/utils/systemUtils.ts
+// src/utils/systemUtils.ts - ATUALIZAR as funções
 export const systemUtils = {
-  // Verificar se o sistema é novo (menos de 60 dias)
+  // CORREÇÃO: Verificar se a data não é futura
   isNewSystem: (createdAt: string): boolean => {
     try {
       const createdDate = new Date(createdAt);
       const currentDate = new Date();
+      
+      // Se a data for futura, não é novo
+      if (createdDate > currentDate) return false;
+      
       const diffTime = currentDate.getTime() - createdDate.getTime();
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
       return diffDays < 60;
@@ -14,11 +18,15 @@ export const systemUtils = {
     }
   },
 
-  // Calcular quantos dias faltam para deixar de ser novo
+  // CORREÇÃO: Retornar 0 se a data for futura
   getDaysRemaining: (createdAt: string): number => {
     try {
       const createdDate = new Date(createdAt);
       const currentDate = new Date();
+      
+      // Se a data for futura, retornar 0
+      if (createdDate > currentDate) return 0;
+      
       const diffTime = currentDate.getTime() - createdDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       return Math.max(0, 60 - diffDays);

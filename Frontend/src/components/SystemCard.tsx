@@ -13,6 +13,7 @@ interface SystemCardProps {
 }
 
 export function SystemCard({ system, onSystemClick }: SystemCardProps) {
+
   // Lógica simples: apenas categoria 'inativos' marca como inativo
   const isInactive = system.category === 'inativos';
 
@@ -21,6 +22,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   const isNew = systemUtils.isNewSystem(systemCreatedAt) && !isInactive;
   const daysRemaining = systemUtils.getDaysRemaining(systemCreatedAt);
   const relativeTime = systemUtils.getRelativeTime(systemCreatedAt);
+
 
   const formatDownloads = (downloads: number) => {
     if (downloads >= 1000) {
@@ -50,18 +52,10 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   };
 
   return (
-    <Card className={`group hover:shadow-lg transition-all duration-300 cursor-pointer h-32 relative ${
-      isInactive ? 'bg-gray-50 border-gray-200' : ''
-    }`}>
-      {/* Tag NOVO no canto superior direito (verde) */}
-      {isNew && !isInactive && (
-        <div className="absolute -top-2 -right-2 z-10">
-          <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-lg flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-            NOVO
-          </Badge>
-        </div>
-      )}
+
+    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32">
+      {/* REMOVIDA COMPLETAMENTE a div da tag NOVO */}
+
       
       <div className="h-full">
         <div className="flex h-full p-4">
@@ -100,19 +94,21 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                 )}
               </div>
               
-              {/* Informações de data e status */}
+              {/* Informações de data */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex items-center gap-1 text-xs ${
                   isInactive ? 'text-gray-600' : 'text-gray-500' // Texto mais escuro para inativos
                 }">
                   <Calendar className="h-3 w-3" />
-                  <span>{relativeTime}</span>
+                  <span>{systemUtils.getRelativeTime(system.createdAt || systemUtils.generateDemoDate(10))}</span>
                 </div>
+
                 {isNew && !isInactive && (
                   <Badge variant="outline" className="text-xs px-1.5 py-0 border-green-200 text-green-700 bg-green-50">
                     {daysRemaining}d restantes
                   </Badge>
                 )}
+
               </div>
               
               {/* Downloads e avaliação */}
