@@ -10,7 +10,7 @@ const dbConfig: PoolConfig = {
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'PUS',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
+  password: 'root',
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
