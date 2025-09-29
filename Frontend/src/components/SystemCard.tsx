@@ -17,12 +17,9 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   // Lógica simples: apenas categoria 'inativos' marca como inativo
   const isInactive = system.category === 'inativos';
 
-  // Verificar se o sistema é novo e calcular informações
+  // Verificar se o sistema é novo (apenas para referência, não usado no UI)
   const systemCreatedAt = system.createdAt || systemUtils.generateDemoDate(Math.random() * 365);
-  const isNew = systemUtils.isNewSystem(systemCreatedAt) && !isInactive;
-  const daysRemaining = systemUtils.getDaysRemaining(systemCreatedAt);
   const relativeTime = systemUtils.getRelativeTime(systemCreatedAt);
-
 
   const formatDownloads = (downloads: number) => {
     if (downloads >= 1000) {
@@ -94,20 +91,16 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                 )}
               </div>
               
-              {/* Informações de data */}
+              {/* Informações de data - REMOVIDA A TAG "Xd restantes" */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex items-center gap-1 text-xs ${
                   isInactive ? 'text-gray-600' : 'text-gray-500' // Texto mais escuro para inativos
                 }">
                   <Calendar className="h-3 w-3" />
-                  <span>{systemUtils.getRelativeTime(system.createdAt || systemUtils.generateDemoDate(10))}</span>
+                  <span>{relativeTime}</span>
                 </div>
 
-                {isNew && !isInactive && (
-                  <Badge variant="outline" className="text-xs px-1.5 py-0 border-green-200 text-green-700 bg-green-50">
-                    {daysRemaining}d restantes
-                  </Badge>
-                )}
+                {/* REMOVIDA COMPLETAMENTE A TAG "Xd restantes" */}
 
               </div>
               
