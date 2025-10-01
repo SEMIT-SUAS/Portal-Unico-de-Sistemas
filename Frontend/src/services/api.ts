@@ -1,3 +1,4 @@
+// src/services/api.ts
 import axios from 'axios';
 
 // PARA FRONTEND: Use import.meta.env (Vite) em vez de process.env
@@ -62,6 +63,7 @@ export const systemService = {
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),
   search: (query: string) => api.post('/systems/search', { query }),
   addReview: (id: number, reviewData: any) => api.post(`/systems/${id}/review`, reviewData),
+  incrementDownloads: (id: number) => api.post(`/systems/${id}/increment-downloads`),
   
   // Novo método para dashboard com suporte a filtro por departamento
   getDashboardStats: (department?: string): Promise<{ data: DashboardStats }> => {

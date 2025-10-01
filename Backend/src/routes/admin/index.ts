@@ -1,10 +1,14 @@
+// src/routes/index.ts
 import express from 'express';
 import systemRoutes from './systems';
-// Futuramente: userRoutes, analyticsRoutes, etc.
 
 const router = express.Router();
 
-// Agrupa todas as rotas admin
-router.use(systemRoutes);
+console.log('🔄 Registrando rotas no index.ts...');
+
+// ✅ Registrar rotas de sistemas
+router.use('/systems', systemRoutes);
+
+console.log('✅ Rotas registradas no index.ts');
 
 export default router;

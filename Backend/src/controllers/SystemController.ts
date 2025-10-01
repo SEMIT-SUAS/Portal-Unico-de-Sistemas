@@ -15,7 +15,7 @@ export class SystemController {
         search, 
         isNew, 
         isHighlight,
-        recentlyAdded // Novo parâmetro
+        recentlyAdded
       } = req.query;
       
       const filters = {
@@ -24,7 +24,7 @@ export class SystemController {
         search: search as string,
         isNew: isNew ? isNew === 'true' : undefined,
         isHighlight: isHighlight ? isHighlight === 'true' : undefined,
-        recentlyAdded: recentlyAdded ? recentlyAdded === 'true' : undefined // Novo filtro
+        recentlyAdded: recentlyAdded ? recentlyAdded === 'true' : undefined
       };
 
       const systems = await SystemModel.findAll(filters);
@@ -295,6 +295,56 @@ export class SystemController {
       res.status(500).json({
         success: false,
         message: 'Erro ao buscar sistemas novos',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // MÉTODO INCREMENT DOWNLOADS (para uso futuro)
+  static async incrementDownloads(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID inválido'
+        });
+      }
+
+      // Verificar se o sistema existe
+      const system = await SystemModel.findById(id);
+      if (!system) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sistema não encontrado'
+        });
+      }
+
+      // Incrementar contador de downloads NO BANCO
+      await SystemModel.incrementDownloads(id);
+
+      // Buscar sistema atualizado para retornar o novo count REAL
+      const updatedSystem = await SystemModel.findById(id);
+
+      console.log(`📥 Download REAL contabilizado para sistema ${system.name} (ID: ${id})`);
+      console.log(`📊 Novos downloads (REAL): ${updatedSystem?.downloads}`);
+
+      res.json({
+        success: true,
+        message: 'Download contabilizado com sucesso',
+        newCount: updatedSystem?.downloads || 0, // ✅ COUNT REAL DO BANCO
+        systemName: system.name
+      });
+    } catch (error) {
+      console.error('Error incrementing downloads:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao contabilizar download',
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {

@@ -1,3 +1,4 @@
+// src/components/SystemModal.tsx
 import { useState } from "react";
 import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
@@ -8,6 +9,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { DigitalSystem } from "../data/systems";
 import { ReviewsModal } from "./ReviewsModal";
 import { RatingModal, RatingData } from "./RatingModal";
+import { systemService } from "../services/api";
 
 interface SystemModalProps {
   system: DigitalSystem | null;
@@ -18,6 +20,7 @@ interface SystemModalProps {
 export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProps) {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (!system) return null;
 
@@ -45,6 +48,46 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
         className={`h-4 w-4 ${i < Math.floor(numericRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
       />
     ));
+  };
+
+  // ✅ FUNÇÃO DE DOWNLOAD DO PWA ATUALIZADA
+  const handlePwaDownload = async () => {
+    if (!system || !system.hasPWA || !isValidUrl(system.pwaUrl)) return;
+
+    try {
+      setIsDownloading(true);
+      
+      console.log(`📥 Iniciando download para: ${system.name} (ID: ${system.id})`);
+      
+      // 1. Contabilizar download no backend (BANCO DE DADOS REAL)
+      try {
+        const response = await systemService.incrementDownloads(system.id);
+        console.log('✅ Download contabilizado NO BANCO:', response.data);
+        
+        // 2. Atualizar o sistema localmente com o valor REAL do banco
+        if (onSystemUpdate) {
+          const updatedSystem: DigitalSystem = {
+            ...system,
+            downloads: response.data.newCount // ✅ USA O VALOR REAL DO BANCO
+          };
+          onSystemUpdate(updatedSystem);
+          console.log('📊 Contador atualizado com valor REAL:', response.data.newCount);
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API de downloads falhou, mas continuando com o download...', apiError);
+        // Não impedir o download mesmo se a API falhar
+      }
+      
+      // 3. Abrir o link do PWA (sempre executa)
+      console.log(`🌐 Abrindo URL: ${system.pwaUrl}`);
+      window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
+      
+    } catch (error) {
+      console.error('❌ Erro inesperado durante download:', error);
+      window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleRatingSubmit = (ratingData: RatingData) => {
@@ -191,7 +234,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* Action Buttons - SIMPLIFICADO */}
+            {/* Action Buttons */}
             <div className="flex gap-3">
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
@@ -209,15 +252,11 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
               {system.hasPWA && (
                 <Button 
                   className="flex-1 bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    if (isValidUrl(system.pwaUrl)) {
-                      window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
-                    }
-                  }}
-                  disabled={!isValidUrl(system.pwaUrl)}
+                  onClick={handlePwaDownload}
+                  disabled={!isValidUrl(system.pwaUrl) || isDownloading}
                 >
                   <Smartphone className="h-4 w-4 mr-2" />
-                  Baixar App (PWA)
+                  {isDownloading ? 'Baixando...' : 'Baixar App (PWA)'}
                 </Button>
               )}
             </div>

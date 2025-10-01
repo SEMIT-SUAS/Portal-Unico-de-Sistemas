@@ -5,37 +5,37 @@ import { DatabaseDigitalSystem, ApiDigitalSystem, UserReview } from '../types';
 export class SystemModel {
   // Buscar todos os sistemas com opções de filtro
   static async findAll(filters: {
-  category?: string;
-  department?: string;
-  search?: string;
-  isNew?: boolean;
-  isHighlight?: boolean;
-  recentlyAdded?: boolean;
-} = {}): Promise<ApiDigitalSystem[]> {
-  let query = `
-    SELECT 
-      ds.*,
-      ds.developer,
-      s.name as secretary_name,
-      json_agg(DISTINCT sf.feature) as features,
-      json_agg(
-        DISTINCT jsonb_build_object(
-          'id', ur.id::text,
-          'userName', ur.user_name,
-          'rating', ur.rating,
-          'comment', ur.comment,
-          'date', ur.date::text
-        )
-      ) as reviews,
-      -- Calcular se é novo baseado na data
-      (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date,
-      -- CALCULO CORRIGIDO: usar DATE_PART em vez de EXTRACT
-      DATE_PART('day', CURRENT_DATE - ds.created_at) as days_since_creation
-    FROM digital_systems ds
-    LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
-    LEFT JOIN system_features sf ON ds.id = sf.system_id
-    LEFT JOIN user_reviews ur ON ds.id = ur.system_id
-  `;
+    category?: string;
+    department?: string;
+    search?: string;
+    isNew?: boolean;
+    isHighlight?: boolean;
+    recentlyAdded?: boolean;
+  } = {}): Promise<ApiDigitalSystem[]> {
+    let query = `
+      SELECT 
+        ds.*,
+        ds.developer,
+        s.name as secretary_name,
+        json_agg(DISTINCT sf.feature) as features,
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', ur.id::text,
+            'userName', ur.user_name,
+            'rating', ur.rating,
+            'comment', ur.comment,
+            'date', ur.date::text
+          )
+        ) as reviews,
+        -- Calcular se é novo baseado na data
+        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date,
+        -- CALCULO CORRIGIDO: usar DATE_PART em vez de EXTRACT
+        DATE_PART('day', CURRENT_DATE - ds.created_at) as days_since_creation
+      FROM digital_systems ds
+      LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
+      LEFT JOIN system_features sf ON ds.id = sf.system_id
+      LEFT JOIN user_reviews ur ON ds.id = ur.system_id
+    `;
     
     const whereClauses: string[] = [];
     const params: any[] = [];
@@ -219,6 +219,7 @@ export class SystemModel {
       systemData.reviews_count || 0,
       systemData.has_pwa || false,
       systemData.pwa_url,
+      systemData.developer
     ];
     
     try {
@@ -300,7 +301,7 @@ export class SystemModel {
     }
   }
 
-  // MÉTODO FALTANTE: Atualizar contador de downloads
+  // ✅ MÉTODO ATUALIZADO: Atualizar contador de downloads NO BANCO
   static async incrementDownloads(systemId: number): Promise<void> {
     const query = `
       UPDATE digital_systems 
@@ -310,6 +311,7 @@ export class SystemModel {
     
     try {
       await pool.query(query, [systemId]);
+      console.log(`📊 Download incrementado no banco para sistema ID: ${systemId}`);
     } catch (error) {
       console.error('Error incrementing downloads:', error);
       throw new Error('Failed to increment downloads');
@@ -449,8 +451,6 @@ export class SystemModel {
       client.release();
     }
   }
-
-  
 
   // Método para mapear do formato do banco para o formato da API
   private static mapToApiFormat(row: any): ApiDigitalSystem {

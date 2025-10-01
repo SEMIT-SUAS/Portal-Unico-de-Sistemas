@@ -1,19 +1,22 @@
+// src/routes/systems.ts
 import express from 'express';
-import { SystemController } from '../../controllers/SystemController';
+import { SystemController } from '../controllers/SystemController';
 
 const router = express.Router();
 
-// 🔐 ROTAS ADMIN - CRUD COMPLETO
-// GET /api/admin/systems - Listar todos os sistemas (admin)
-router.get('/systems', SystemController.adminGetAllSystems);
+console.log('🔧 Configurando rotas de sistemas...');
 
-// POST /api/admin/systems - Criar novo sistema
-router.post('/systems', SystemController.adminCreateSystem);
+// Rotas existentes
+router.get('/', SystemController.getAllSystems);
+router.get('/recent', SystemController.getRecentSystems);
+router.get('/highlighted', SystemController.getHighlightedSystems);
+router.get('/new', SystemController.getNewSystems);
+router.post('/search', SystemController.searchSystems);
+router.get('/category/:category', SystemController.getSystemsByCategory);
+router.get('/department/:department', SystemController.getSystemsByDepartment);
+router.post('/:id/review', SystemController.addReview);
+router.get('/:id', SystemController.getSystemById);
 
-// PUT /api/admin/systems/:id - Atualizar sistema
-router.put('/systems/:id', SystemController.adminUpdateSystem);
-
-// DELETE /api/admin/systems/:id - Deletar sistema
-router.delete('/systems/:id', SystemController.adminDeleteSystem);
+console.log('✅ Rotas de sistemas configuradas');
 
 export default router;

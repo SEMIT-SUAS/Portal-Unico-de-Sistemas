@@ -53,6 +53,7 @@ export const systemService = {
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),
   search: (query: string) => api.post('/systems/search', { query }),
   addReview: (id: number, reviewData: any) => api.post(`/systems/${id}/review`, reviewData),
+  incrementDownloads: (id: number) => api.post(`/systems/${id}/increment-downloads`),
 };
 
 // Serviços para dashboard

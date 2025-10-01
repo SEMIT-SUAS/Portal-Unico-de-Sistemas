@@ -8,7 +8,7 @@ dotenv.config();
 const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: 'pus',
+  database: 'PUS',
   user: process.env.DB_USER || 'postgres',
   password: 'root',
   max: 20,
