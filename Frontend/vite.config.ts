@@ -51,11 +51,35 @@
       },
     },
     build: {
-      target: 'esnext',
-      outDir: 'build',
-    },
-    server: {
-      port: 3000,
-      open: true,
-    },
-  });
+
+target: 'esnext',
+
+outDir: 'build',
+
+},
+
+server: {
+
+port: 3000,
+
+open: true,
+
+proxy: {
+
+// tudo que começar com /api será redirecionado pro backend
+
+'/api': {
+
+target: 'http://localhost:3001',
+
+changeOrigin: true,
+
+secure: false,
+
+},
+
+},
+
+},
+
+});
