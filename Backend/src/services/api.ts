@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Para o backend, usamos a URL interna
-const API_BASE_URL = process.env.API_URL || 'http://10.0.0.116:3001/api';
+const API_BASE_URL = process.env.API_URL || 'https://sistemas.saoluis.ma.gov.br';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
