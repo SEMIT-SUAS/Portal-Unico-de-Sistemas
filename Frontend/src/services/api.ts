@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // PARA FRONTEND: Use import.meta.env (Vite) em vez de process.env
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL =  'http://10.0.0.116:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,17 +13,17 @@ const api = axios.create({
 });
 
 // Interceptor para requests (apenas logging no dev)
-api.interceptors.request.use(
-  (config) => {
-    if (import.meta.env.DEV) {
-      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// api.interceptors.request.use(
+//   (config) => {
+//     if (import.meta.env.DEV) {
+//       console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+//     }
+//     return config;
+//   },
+//   (error) => {
+//     return Promise.reject(error);
+//   }
+// );
 
 // Interceptor para responses
 api.interceptors.response.use(
