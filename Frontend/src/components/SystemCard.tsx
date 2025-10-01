@@ -1,3 +1,4 @@
+// src/components/SystemCard.tsx
 import React from "react";
 import { ExternalLink, Download, Star, Calendar, Ban } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
