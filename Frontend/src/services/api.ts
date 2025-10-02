@@ -65,6 +65,8 @@ export const systemService = {
   search: (query: string) => api.post('/systems/search', { query }),
   addReview: (id: number, reviewData: any) => api.post(`/systems/${id}/review`, reviewData),
   incrementDownloads: (id: number) => api.post(`/systems/${id}/increment-downloads`),
+  // ✅ NOVO SERVIÇO: Incrementar acessos
+  incrementAccess: (id: number) => api.post(`/systems/${id}/increment-access`),
   
   // Novo método para dashboard com suporte a filtro por departamento
   getDashboardStats: (department?: string): Promise<{ data: DashboardStats }> => {
