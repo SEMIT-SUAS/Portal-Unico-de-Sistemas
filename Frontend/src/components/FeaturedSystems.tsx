@@ -14,9 +14,15 @@ interface FeaturedSystemsProps {
 export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps) {
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
   const [currentNewIndex, setCurrentNewIndex] = useState(0);
+  const [imageKey, setImageKey] = useState(0); // ✅ Key para forçar recarregamento
   
   const featuredSystems = systems.filter(system => system.isHighlight);
   const newSystems = systems.filter(system => system.isNew);
+
+  // ✅ Efeito para forçar recarregamento das imagens quando mudar o sistema
+  useEffect(() => {
+    setImageKey(prev => prev + 1);
+  }, [currentFeaturedIndex, currentNewIndex]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -57,9 +63,14 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                   <div className="flex h-full">
                     <div className="w-1/3 relative">
                       <ImageWithFallback
+                        key={`featured-${currentFeaturedIndex}-${imageKey}`} // ✅ Key única para forçar recarregamento
                         src={featuredSystems[currentFeaturedIndex]?.iconUrl || ""}
                         alt={featuredSystems[currentFeaturedIndex]?.name || ""}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log('❌ Erro ao carregar imagem em destaque:', featuredSystems[currentFeaturedIndex]?.iconUrl);
+                          // Fallback será aplicado pelo ImageWithFallback
+                        }}
                       />
                       <div className="absolute inset-0 bg-black/20"></div>
                     </div>
@@ -111,9 +122,14 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                   <div className="flex h-full">
                     <div className="w-1/3 relative">
                       <ImageWithFallback
+                        key={`new-${currentNewIndex}-${imageKey}`} // ✅ Key única para forçar recarregamento
                         src={newSystems[currentNewIndex]?.iconUrl || ""}
                         alt={newSystems[currentNewIndex]?.name || ""}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log('❌ Erro ao carregar imagem em novidades:', newSystems[currentNewIndex]?.iconUrl);
+                          // Fallback será aplicado pelo ImageWithFallback
+                        }}
                       />
                       <div className="absolute inset-0 bg-black/20"></div>
                     </div>
