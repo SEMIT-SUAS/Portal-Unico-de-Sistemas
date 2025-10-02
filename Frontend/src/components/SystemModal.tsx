@@ -1,6 +1,6 @@
 // src/components/SystemModal.tsx
 import { useState } from "react";
-import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code } from "lucide-react";
+import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -21,16 +21,17 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isAccessing, setIsAccessing] = useState(false);
 
   if (!system) return null;
 
-  const formatDownloads = (downloads: number) => {
-    if (downloads >= 1000000) {
-      return `${(downloads / 1000000).toFixed(1)}M`;
-    } else if (downloads >= 1000) {
-      return `${(downloads / 1000).toFixed(1)}k`;
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
     }
-    return downloads.toLocaleString('pt-BR');
+    return num.toLocaleString('pt-BR');
   };
 
   // Corrigir: garantir que rating seja sempre um número
@@ -58,6 +59,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
       setIsDownloading(true);
       
       console.log(`📥 Iniciando download para: ${system.name} (ID: ${system.id})`);
+      console.log(`📊 Downloads atuais: ${system.downloads || 0}`);
       
       // 1. Contabilizar download no backend (BANCO DE DADOS REAL)
       try {
@@ -71,7 +73,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
             downloads: response.data.newCount // ✅ USA O VALOR REAL DO BANCO
           };
           onSystemUpdate(updatedSystem);
-          console.log('📊 Contador atualizado com valor REAL:', response.data.newCount);
+          console.log('📊 Contador de downloads atualizado com valor REAL:', response.data.newCount);
         }
       } catch (apiError) {
         console.warn('⚠️ API de downloads falhou, mas continuando com o download...', apiError);
@@ -87,6 +89,50 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
       window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: ACESSAR SISTEMA COM CONTAGEM
+  const handleSystemAccess = async () => {
+    if (!system || !isValidUrl(system.accessUrl)) return;
+
+    try {
+      setIsAccessing(true);
+      
+      console.log(`🚀 Iniciando acesso para: ${system.name} (ID: ${system.id})`);
+      console.log(`📈 Acessos atuais: ${system.usageCount || 0}`);
+      
+      // 1. Contabilizar acesso no backend (BANCO DE DADOS REAL)
+      try {
+        const response = await systemService.incrementAccess(system.id);
+        console.log('✅ Acesso contabilizado NO BANCO:', response.data);
+
+         // ✅ CORREÇÃO: Garantir que newCount seja número
+        const newCount = Number(response.data.newCount) || (system.usageCount || 0) + 1;
+        
+        // 2. Atualizar o sistema localmente com o valor REAL do banco
+        if (onSystemUpdate) {
+          const updatedSystem: DigitalSystem = {
+            ...system,
+            usageCount: newCount // ✅ USA O VALOR COVERTIDO PARA NUMERO
+          };
+          onSystemUpdate(updatedSystem);
+          console.log('📈 Contador de acessos atualizado com valor REAL:', response.data.newCount);
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API de acessos falhou, mas continuando com o acesso...', apiError);
+        // Não impedir o acesso mesmo se a API falhar
+      }
+      
+      // 3. Abrir o link do sistema (sempre executa)
+      console.log(`🌐 Abrindo URL: ${system.accessUrl}`);
+      window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
+      
+    } catch (error) {
+      console.error('❌ Erro inesperado durante acesso:', error);
+      window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsAccessing(false);
     }
   };
 
@@ -143,7 +189,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
   return (
     <>
       <Dialog open={!!system} onOpenChange={() => onClose()}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto overflor-x-hidden">
           <DialogHeader>
             <DialogTitle className="sr-only">{system.name}</DialogTitle>
             <DialogDescription className="sr-only">
@@ -159,19 +205,19 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-2xl line-clamp-2 pr-2 font-semibold">
+                  <h2 className="text-2xl line-clamp-2 pr-2 font-semibold break-words">
                     {system.name}
                   </h2>
                   {system.isNew && (
-                    <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600">
+                    <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 flex-shrink-0">
                       NOVO
                     </Badge>
                   )}
                 </div>
-                <p className="text-gray-600 mt-2">{system.description}</p>
+                <p className="text-gray-600 mt-2 break-words">{system.description}</p>
                 
-                {/* Rating and Downloads Stats */}
-                <div className="flex items-center gap-6 mt-3">
+                {/* Rating, Downloads e Acessos Stats */}
+                <div className="flex items-center gap-6 mt-3 flex-wrap">
                   {safeRating > 0 && (
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
@@ -184,10 +230,18 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                     </div>
                   )}
                   
+                  {/* ✅ AGORA VAI MOSTRAR OS ACESSOS CORRETAMENTE */}
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-blue-600">
+                      {formatNumber(system.usageCount || 0)} acessos
+                    </span>
+                  </div>
+                  
                   {system.downloads && (
                     <div className="flex items-center gap-2">
                       <Download className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold text-green-600">{formatDownloads(system.downloads)} downloads</span>
+                      <span className="font-semibold text-green-600">{formatNumber(system.downloads)} downloads</span>
                     </div>
                   )}
                 </div>
@@ -199,10 +253,10 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
             {/* System Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
-                <div>
+                <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
                   <p className="font-medium">Público-alvo</p>
-                  <p className="text-sm text-gray-600">{system.targetAudience}</p>
+                  <p className="text-sm text-gray-600 truncate">{system.targetAudience}</p>
                 </div>
               </div>
               
@@ -234,19 +288,15 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            {/* Action Buttons ATUALIZADOS */}
+            <div className="flex gap-3 flex-col sm:flex-row">
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  if (isValidUrl(system.accessUrl)) {
-                    window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
-                  }
-                }}
-                disabled={!isValidUrl(system.accessUrl)}
+                onClick={handleSystemAccess}
+                disabled={!isValidUrl(system.accessUrl) || isAccessing}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Acessar Sistema
+                {isAccessing ? 'Acessando...' : 'Acessar Sistema'}
               </Button>
               
               {system.hasPWA && (
@@ -266,7 +316,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
             {/* About System */}
             <div>
               <h3 className="font-semibold mb-3">Sobre o Sistema</h3>
-              <p className="text-gray-700 leading-relaxed">{system.fullDescription}</p>
+              <p className="text-gray-700 leading-relaxed break-words">{system.fullDescription}</p>
             </div>
 
             <Separator />
@@ -278,7 +328,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 {system.mainFeatures.map((feature, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
+                    <span className="text-gray-700 break-words">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -289,7 +339,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
               <>
                 <Separator />
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-2">
                     <h3 className="font-semibold">Avaliações dos Usuários</h3>
                     <Button
                       variant="outline"
@@ -306,12 +356,12 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                     <div className="space-y-4">
                       {displayedReviews.map((review) => (
                         <div key={review.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start justify-between mb-2 flex-col sm:flex-row gap-2">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                                 {review.userName.charAt(0)}
                               </div>
-                              <span className="font-medium">{review.userName}</span>
+                              <span className="font-medium break-words">{review.userName}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {renderStars(review.rating)}
@@ -320,7 +370,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                               </span>
                             </div>
                           </div>
-                          <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                          <p className="text-gray-700 leading-relaxed break-words">{review.comment}</p>
                         </div>
                       ))}
                       

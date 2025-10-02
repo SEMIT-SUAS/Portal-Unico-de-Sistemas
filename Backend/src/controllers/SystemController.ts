@@ -332,7 +332,7 @@ export class SystemController {
       const updatedSystem = await SystemModel.findById(id);
 
       console.log(`📥 Download REAL contabilizado para sistema ${system.name} (ID: ${id})`);
-      console.log(`📊 Novos downloads (REAL): ${updatedSystem?.downloads}`);
+      console.log(`📊 De ${system.downloads || 0} para ${updatedSystem?.downloads || 0} downloads`);
 
       res.json({
         success: true,
@@ -345,6 +345,68 @@ export class SystemController {
       res.status(500).json({
         success: false,
         message: 'Erro ao contabilizar download',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // ✅ MÉTODO ATUALIZADO: INCREMENTAR ACESSOS
+  static async incrementAccess(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID inválido'
+        });
+      }
+
+      // Verificar se o sistema existe
+      const system = await SystemModel.findById(id);
+      if (!system) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sistema não encontrado'
+        });
+      }
+
+        // ✅ DEBUG: Log antes do incremento
+      console.log('🔍 DEBUG - Antes do incremento:', {
+        systemId: id,
+        currentUsageCount: system.usageCount,
+        currentDownloads: system.downloads
+      });
+
+      // Incrementar contador de acessos NO BANCO
+      await SystemModel.incrementUsage(id);
+
+      // Buscar sistema atualizado para retornar o novo count REAL
+      const updatedSystem = await SystemModel.findById(id);
+      
+      // ✅ GARANTIR que seja número
+      const newCount = Number(updatedSystem?.usageCount) || 0;
+
+      console.log(`🚀 Acesso REAL contabilizado para sistema ${system.name} (ID: ${id})`);
+      console.log(`📈 De ${system.usageCount || 0} para ${updatedSystem?.usageCount || 0} acessos`);
+
+      res.json({
+        success: true,
+        message: 'Acesso contabilizado com sucesso',
+        newCount: newCount,
+        systemName: system.name,
+        ststemId: id,
+        previousCounte: system.usageCount || 0
+      });
+    } catch (error) {
+      console.error('Error incrementing access:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao contabilizar acesso',
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {

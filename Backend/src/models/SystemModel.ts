@@ -285,7 +285,7 @@ export class SystemModel {
     }
   }
 
-  // MÉTODO FALTANTE: Atualizar estatísticas de uso
+  // ✅ MÉTODO ATUALIZADO: Atualizar estatísticas de uso (ACESSOS)
   static async incrementUsage(systemId: number): Promise<void> {
     const query = `
       UPDATE digital_systems 
@@ -295,6 +295,7 @@ export class SystemModel {
     
     try {
       await pool.query(query, [systemId]);
+      console.log(`📈 Acesso incrementado no banco para sistema ID: ${systemId}`);
     } catch (error) {
       console.error('Error incrementing usage:', error);
       throw new Error('Failed to increment usage');
@@ -452,10 +453,20 @@ export class SystemModel {
     }
   }
 
-  // Método para mapear do formato do banco para o formato da API
+  // ✅ MÉTODO CORRIGIDO: Mapear do formato do banco para o formato da API
   private static mapToApiFormat(row: any): ApiDigitalSystem {
     const isNewByDate = row.is_new_by_date;
     const daysSinceCreation = row.days_since_creation;
+  
+   // ✅ DEBUG: Log para verificar os valores do banco
+    console.log('🔍 DEBUG SystemModel - Valores do banco:', {
+      id: row.id,
+      name: row.name,
+      usage_count: row.usage_count,
+      downloads: row.downloads,
+      usage_count_type: typeof row.usage_count
+    });
+
     
     return {
       id: row.id,
@@ -470,7 +481,8 @@ export class SystemModel {
       isNew: row.is_new || isNewByDate,
       iconUrl: row.icon_url,
       accessUrl: row.access_url,
-      usageCount: row.usage_count,
+      // ✅ CORRIGIDO: Mapear usage_count para usageCount
+      usageCount: Number(row.usage_count) || 0, // ✅ AGORA VAI FUNCIONAR
       downloads: row.downloads,
       rating: row.rating,
       reviewsCount: row.reviews_count,

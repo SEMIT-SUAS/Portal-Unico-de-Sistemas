@@ -62,20 +62,21 @@ app.post('/api/systems/:id/increment-downloads', async (req, res) => {
       UPDATE digital_systems 
       SET downloads = downloads + 1, updated_at = NOW()
       WHERE id = $1
-      RETURNING downloads
+      RETURNING downloads, name
     `;
     
     const updateResult = await client.query(updateQuery, [id]);
     const newDownloadCount = updateResult.rows[0].downloads;
+    const systemName = updateResult.rows[0].name;
 
-    console.log(`📥 Download REAL contabilizado para ${currentSystem.name}`);
+    console.log(`📥 Download REAL contabilizado para ${systemName}`);
     console.log(`📊 De ${currentDownloads} para ${newDownloadCount} downloads`);
     
     res.json({ 
       success: true, 
       message: 'Download contabilizado no banco de dados!',
       systemId: id,
-      systemName: currentSystem.name,
+      systemName: systemName,
       previousCount: currentDownloads,
       newCount: newDownloadCount, // ✅ COUNT REAL DO BANCO
       timestamp: new Date().toISOString()
@@ -92,12 +93,82 @@ app.post('/api/systems/:id/increment-downloads', async (req, res) => {
   }
 });
 
+// ✅ ROTA DIRETA PARA ACESSOS
+app.post('/api/systems/:id/increment-access', async (req, res) => {
+  let client;
+  try {
+    client = await pool.connect();
+    const id = parseInt(req.params.id);
+    console.log('🚀🚀🚀 ROTA DIRETA DE ACESSOS CHAMADA! ID:', id);
+    
+    // ✅ VERIFICAR SE O SISTEMA EXISTE
+    const systemQuery = 'SELECT * FROM digital_systems WHERE id = $1';
+    const systemResult = await client.query(systemQuery, [id]);
+    
+    if (systemResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sistema não encontrado'
+      });
+    }
+
+    const currentSystem = systemResult.rows[0];
+    const currentAccesses = currentSystem.usage_count || 0;
+
+    // ✅ DEBUG: Mostrar valores antes do update
+    console.log('🔍 Valores antes do update:');
+    console.log('   usage_count:', currentSystem.usage_count);
+    console.log('   downloads:', currentSystem.downloads);
+    console.log('   name:', currentSystem.name);
+
+    // ✅ INCREMENTAR ACESSOS NO BANCO DE DADOS REAL
+    const updateQuery = `
+      UPDATE digital_systems 
+      SET usage_count = usage_count + 1, updated_at = NOW()
+      WHERE id = $1
+      RETURNING usage_count, downloads, name
+    `;
+    
+    const updateResult = await client.query(updateQuery, [id]);
+    const newAccessCount = updateResult.rows[0].usage_count;
+    const systemName = updateResult.rows[0].name;
+
+    // ✅ DEBUG: Mostrar valores depois do update
+    console.log('🔍 Valores depois do update:');
+    console.log('   usage_count:', newAccessCount);
+    console.log('   downloads:', updateResult.rows[0].downloads);
+
+    console.log(`🚀 Acesso REAL contabilizado para ${systemName}`);
+    console.log(`📈 De ${currentAccesses} para ${newAccessCount} acessos`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Acesso contabilizado no banco de dados!',
+      systemId: id,
+      systemName: systemName,
+      previousCount: currentAccesses,
+      newCount: newAccessCount, // ✅ COUNT REAL DO BANCO
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Erro na rota de acessos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao contabilizar acesso',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
 // Registrar rotas normais
 app.use('/api', routes);
 
 // ✅ Listar rotas manualmente para debug
 console.log('\n🔍 ROTAS REGISTRADAS:');
 console.log('POST /api/systems/:id/increment-downloads ✅ (Rota direta)');
+console.log('POST /api/systems/:id/increment-access ✅ (Rota direta)');
 
 // Rota de health check
 app.get('/health', async (req, res) => {
@@ -110,7 +181,8 @@ app.get('/health', async (req, res) => {
       database: 'Connected',
       environment: config.nodeEnv,
       timestamp: new Date().toISOString(),
-      downloadRoute: 'POST /api/systems/:id/increment-downloads ✅'
+      downloadRoute: 'POST /api/systems/:id/increment-downloads ✅',
+      accessRoute: 'POST /api/systems/:id/increment-access ✅'
     });
   } catch (error) {
     console.error('Health check error:', error);
@@ -126,9 +198,10 @@ app.get('/health', async (req, res) => {
 // Rota raiz
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'API do Portal Único de Sistemas - COM ROTA DIRETA',
+    message: 'API do Portal Único de Sistemas - COM ROTAS DIRETAS',
     version: '1.0.0',
-    downloadEndpoint: 'POST /api/systems/:id/increment-downloads ✅'
+    downloadEndpoint: 'POST /api/systems/:id/increment-downloads ✅',
+    accessEndpoint: 'POST /api/systems/:id/increment-access ✅'
   });
 });
 
@@ -138,7 +211,10 @@ app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     message: `Rota não encontrada: ${req.method} ${req.originalUrl}`,
-    availableDownloadRoute: 'POST /api/systems/:id/increment-downloads'
+    availableRoutes: {
+      download: 'POST /api/systems/:id/increment-downloads',
+      access: 'POST /api/systems/:id/increment-access'
+    }
   });
 });
 
@@ -150,6 +226,7 @@ const startServer = async () => {
     app.listen(config.port, () => {
       console.log(`\n🚀 Servidor rodando na porta ${config.port}`);
       console.log(`✅ ROTA DE DOWNLOADS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-downloads`);
+      console.log(`✅ ROTA DE ACESSOS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-access`);
       console.log(`🔍 Health check: http://localhost:${config.port}/health\n`);
     });
   } catch (error) {

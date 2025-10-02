@@ -128,29 +128,7 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
               </div>
             </div>
             
-            {/* Botão na parte inferior - mantém a cor original para inativos */}
-            <Button 
-              size="sm"
-              className={`w-full text-xs h-7 ${
-                isInactive
-                  ? 'bg-gray-400 hover:bg-gray-500 cursor-not-allowed' // Mantém cinza para inativos
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-              onClick={handleAccessClick}
-              disabled={isInactive}
-            >
-              {isInactive ? (
-                <>
-                  <Ban className="h-3 w-3 mr-1" />
-                  Indisponível
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Acessar
-                </>
-              )}
-            </Button>
+          
           </div>
         </div>
       </div>
