@@ -225,9 +225,11 @@ const startServer = async () => {
     
     app.listen(config.port, () => {
       console.log(`\n🚀 Servidor rodando na porta ${config.port}`);
+
       console.log(`✅ ROTA DE DOWNLOADS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-downloads`);
       console.log(`✅ ROTA DE ACESSOS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-access`);
       console.log(`🔍 Health check: http://localhost:${config.port}/health\n`);
+
     });
   } catch (error) {
     console.error('❌ Falha ao iniciar servidor:', error);
