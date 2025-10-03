@@ -48,7 +48,7 @@ api.interceptors.response.use(
 
 // Serviços para sistemas
 export const systemService = {
-  getAll: () => api.get('/systems'),
+  getAll: () => api.get('api/systems'),
   getById: (id: number) => api.get(`/systems/${id}`),
   getByCategory: (category: string) => api.get(`/systems/category/${category}`),
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),
