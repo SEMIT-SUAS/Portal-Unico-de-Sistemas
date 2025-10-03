@@ -18,7 +18,8 @@ export const corsOptions: CorsOptions = {
     else {
       const allowedOrigins = [
         config.corsOrigin,
-        'https://sistemas.saoluis.ma.gov.br'
+        'https://sistemas.saoluis.ma.gov.br',
+        'http://sistemas.saoluis.ma.gov.br'
       
       ];
       
