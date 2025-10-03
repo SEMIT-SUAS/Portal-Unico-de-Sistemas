@@ -51,35 +51,13 @@
       },
     },
     build: {
-
-target: 'esnext',
-
-outDir: 'build',
-
-},
-
-server: {
-
-port: 3000,
-
-open: true,
-
-proxy: {
-
-// tudo que começar com /api será redirecionado pro backend
-
-'/api': {
-
-target: 'http://localhost:3001',
-
-changeOrigin: true,
-
-secure: false,
-
-},
-
-},
-
-},
-
-});
+      target: 'esnext',
+      outDir: 'build',
+    },
+    server: {
+      port: 3000,
+      open: true,
+      host: true,
+      allowedHosts: ['sistemas.saoluis.ma.gov.br'],
+    },
+  });
