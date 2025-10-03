@@ -1,6 +1,6 @@
 // src/routes/index.ts
 import express from 'express';
-import systemRoutes from './systems';
+import systemRoutes from './system';
 
 const router = express.Router();
 
