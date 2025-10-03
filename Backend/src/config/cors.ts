@@ -7,7 +7,8 @@ export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     // Em desenvolvimento, permitir localhost e sem origin (como Postman)
     if (config.nodeEnv === 'development') {
-      if (!origin || origin.includes('10.0.0.116') || origin.includes('127.0.0.1')) {
+      // if (!origin || origin.includes('10.0.0.116') || origin.includes('127.0.0.1')) {
+      if (!origin || origin.includes('sistemas.saoluis.ma.gov.br') || origin.includes('127.0.0.1')) {
         callback(null, true);
       } else {
         callback(new Error('Não permitido por CORS'));
@@ -17,8 +18,9 @@ export const corsOptions: CorsOptions = {
     else {
       const allowedOrigins = [
         config.corsOrigin,
-        'https://seusite.com',
-        'https://www.seusite.com'
+        'https://sistemas.saoluis.ma.gov.br',
+        'http://sistemas.saoluis.ma.gov.br'
+      
       ];
       
       if (origin && allowedOrigins.includes(origin)) {

@@ -231,7 +231,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                   )}
                   
                   {/* ✅ AGORA VAI MOSTRAR OS ACESSOS CORRETAMENTE */}
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4 text-blue-600" />
                     <span className="font-semibold text-blue-600">
                       {formatNumber(system.usageCount || 0)} acessos
@@ -243,7 +243,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                       <Download className="h-4 w-4 text-green-600" />
                       <span className="font-semibold text-green-600">{formatNumber(system.downloads)} downloads</span>
                     </div>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>

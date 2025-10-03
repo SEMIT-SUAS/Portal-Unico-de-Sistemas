@@ -2,7 +2,10 @@
 import axios from 'axios';
 
 // Para o backend, usamos a URL interna
-const API_BASE_URL = process.env.API_URL || 'https://sistemas.saoluis.ma.gov.br';
+// const API_BASE_URL = process.env.API_URL || 'https://sistemas.saoluis.ma.gov.br';
+// const API_BASE_URL = 'https://sistemas.saoluis.ma.gov.br';
+const API_BASE_URL = '';
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -47,7 +50,7 @@ api.interceptors.response.use(
 
 // Serviços para sistemas
 export const systemService = {
-  getAll: () => api.get('/systems'),
+  getAll: () => api.get('/api/systems'),
   getById: (id: number) => api.get(`/systems/${id}`),
   getByCategory: (category: string) => api.get(`/systems/category/${category}`),
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),

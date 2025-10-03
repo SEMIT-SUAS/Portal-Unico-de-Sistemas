@@ -46,8 +46,9 @@ export const config: AppConfig = {
   
   // Segurança
   jwtSecret: process.env.JWT_SECRET || 'fallback-secret-change-in-production',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://sistemas.saoluis.ma.gov.br:3000',
-  
+  // corsOrigin: process.env.CORS_ORIGIN || 'http://sistemas.saoluis.ma.gov.br:3000',
+  corsOrigin: 'http://sistemas.saoluis.ma.gov.br',
+
   // Log
   logLevel: process.env.LOG_LEVEL || 'info'
 };

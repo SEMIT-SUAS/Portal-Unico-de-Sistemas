@@ -1,6 +1,6 @@
 // src/routes/systems.ts
 import express from 'express';
-import { SystemController } from '../controllers/SystemController';
+import { SystemController } from '../../controllers/SystemController'
 
 const router = express.Router();
 
