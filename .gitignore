@@ -17,7 +17,7 @@ coverage/
 # Frontend (ex: React/Vue)
 # ========================
 # Dependências
-Frontend/node_modules/
+Frontend/node_modules/*
 /.pnp
 .pnp.js
 
