@@ -1,9 +1,8 @@
 // src/components/SystemCard.tsx
 import React from "react";
-import { ExternalLink, Download, Star, Calendar, Ban } from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Download, Star, Calendar, Ban } from "lucide-react";
+import { Card, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { DigitalSystem } from "../data/systems";
 import { systemUtils } from "../utils/systemUtils";
