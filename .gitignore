@@ -1,5 +1,7 @@
 # Arquivo .gitignore na raiz do projeto
 
+node_modules
+
 # Backend (ex: Node.js)
 # =====================
 Backend/node_modules/
