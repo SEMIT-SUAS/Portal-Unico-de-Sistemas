@@ -1,7 +1,9 @@
+import React from "react";
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
 // Corrigindo a importação da imagem
 import logoSaoLuis from "../assets/f95aa73053455c41831cdd38cc0842368a9337c1.png";
+
 
 interface HeaderProps {
   searchTerm: string;

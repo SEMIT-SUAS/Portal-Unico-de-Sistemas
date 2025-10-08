@@ -1,6 +1,7 @@
 {
       "name": "catalogo-sistemas-digitais",
       "version": "0.1.0",
+      "proxy": "https://sistemas.saoluis.ma.gov.br",
       "private": true,
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
