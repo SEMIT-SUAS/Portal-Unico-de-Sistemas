@@ -1,4 +1,5 @@
 // components/Dashboard.tsx
+import React from "react";
 import { DigitalSystem } from "../data/systems";
 import { Building, Star, MessageSquare } from "lucide-react";
 

@@ -1,4 +1,6 @@
+
 // src/components/SystemModal.tsx
+import React from "react";
 import { useState } from "react";
 import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";

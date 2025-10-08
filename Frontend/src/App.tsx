@@ -8,6 +8,7 @@ import { SystemModal } from "./components/SystemModal";
 import { useSystems, useDashboard } from "./hooks/useSystems";
 import { systemService } from "./services/api.ts";
 import { DigitalSystem, categories, departmentCategories } from "./data/systems";
+import React from "react";
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
