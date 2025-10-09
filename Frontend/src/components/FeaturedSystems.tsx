@@ -114,7 +114,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
           {newSystems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-yellow-500 text-black">NOVO</Badge>
+                {/* <Badge className="bg-yellow-500 text-black">NOVO</Badge> */}
                 <h2 className="text-lg font-bold text-gray-900">Novidades</h2>
               </div>
               
@@ -136,11 +136,11 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                     </div>
                     
                     <div className="flex-1 p-3 flex flex-col justify-center">
-                      <div className="flex items-center gap-2 mb-2">
+                      {/* <div className="flex items-center gap-2 mb-2">
                         <Badge className="bg-yellow-500 text-black text-xs">
                           NOVO {newSystems[currentNewIndex]?.launchYear}
                         </Badge>
-                      </div>
+                      </div> */}
                       <h3 className="text-base font-bold mb-2 line-clamp-2">
                         {newSystems[currentNewIndex]?.name}
                       </h3>

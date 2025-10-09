@@ -4,7 +4,7 @@ import { SystemModel } from '../models/SystemModel';
 import pool from '../config/database';
 
 export class SystemController {
-  // Obter todos os sistemas (ATUALIZADO)
+  // ✅ ATUALIZADO: Obter todos os sistemas com mesma lógica para Destaques e Novidades
   static async getAllSystems(req: Request, res: Response) {
     let client;
     try {
@@ -29,10 +29,16 @@ export class SystemController {
 
       const systems = await SystemModel.findAll(filters);
       
+      // ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES
+      const featuredSystems = systems.filter(system => system.isHighlight);
+      const newSystems = systems.filter(system => system.isNew);
+      
       res.json({
         success: true,
         data: systems,
         count: systems.length,
+        featuredCount: featuredSystems.length,
+        newCount: newSystems.length,
         filters
       });
     } catch (error) {
@@ -47,7 +53,55 @@ export class SystemController {
     }
   }
 
-  // NOVA ROTA: Obter sistemas recentes
+  // ✅ ATUALIZADO: Obter sistemas em destaque
+  static async getHighlightedSystems(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const systems = await SystemModel.findHighlighted();
+      
+      res.json({
+        success: true,
+        data: systems,
+        count: systems.length
+      });
+    } catch (error) {
+      console.error('Error fetching highlighted systems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar sistemas em destaque',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // ✅ ATUALIZADO: Obter sistemas novos (MESMA LÓGICA DOS DESTAQUES)
+  static async getNewSystems(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const systems = await SystemModel.findNewSystems();
+      
+      res.json({
+        success: true,
+        data: systems,
+        count: systems.length
+      });
+    } catch (error) {
+      console.error('Error fetching new systems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar sistemas novos',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // NOVA ROTA: Obter sistemas recentes (MANTIDO)
   static async getRecentSystems(req: Request, res: Response) {
     let client;
     try {
@@ -76,7 +130,7 @@ export class SystemController {
     }
   }
 
-  // Obter sistema por ID
+  // Obter sistema por ID (MANTIDO)
   static async getSystemById(req: Request, res: Response) {
     let client;
     try {
@@ -114,7 +168,7 @@ export class SystemController {
     }
   }
 
-  // Obter sistemas por categoria
+  // Obter sistemas por categoria (MANTIDO)
   static async getSystemsByCategory(req: Request, res: Response) {
     let client;
     try {
@@ -140,7 +194,7 @@ export class SystemController {
     }
   }
 
-  // Obter sistemas por departamento
+  // Obter sistemas por departamento (MANTIDO)
   static async getSystemsByDepartment(req: Request, res: Response) {
     let client;
     try {
@@ -166,7 +220,7 @@ export class SystemController {
     }
   }
 
-  // Buscar sistemas
+  // Buscar sistemas (MANTIDO)
   static async searchSystems(req: Request, res: Response) {
     let client;
     try {
@@ -200,7 +254,7 @@ export class SystemController {
     }
   }
 
-  // Adicionar avaliação
+  // Adicionar avaliação (MANTIDO)
   static async addReview(req: Request, res: Response) {
     let client;
     try {
@@ -254,55 +308,7 @@ export class SystemController {
     }
   }
 
-  // Obter sistemas em destaque
-  static async getHighlightedSystems(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const systems = await SystemModel.findHighlighted();
-      
-      res.json({
-        success: true,
-        data: systems,
-        count: systems.length
-      });
-    } catch (error) {
-      console.error('Error fetching highlighted systems:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar sistemas em destaque',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-    } finally {
-      if (client) client.release();
-    }
-  }
-
-  // Obter sistemas novos
-  static async getNewSystems(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const systems = await SystemModel.findNewSystems();
-      
-      res.json({
-        success: true,
-        data: systems,
-        count: systems.length
-      });
-    } catch (error) {
-      console.error('Error fetching new systems:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar sistemas novos',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
-    } finally {
-      if (client) client.release();
-    }
-  }
-
-  // MÉTODO INCREMENT DOWNLOADS (para uso futuro)
+  // MÉTODO INCREMENT DOWNLOADS (MANTIDO)
   static async incrementDownloads(req: Request, res: Response) {
     let client;
     try {
@@ -352,7 +358,7 @@ export class SystemController {
     }
   }
 
-  // ✅ MÉTODO ATUALIZADO: INCREMENTAR ACESSOS
+  // ✅ MÉTODO ATUALIZADO: INCREMENTAR ACESSOS (MANTIDO)
   static async incrementAccess(req: Request, res: Response) {
     let client;
     try {

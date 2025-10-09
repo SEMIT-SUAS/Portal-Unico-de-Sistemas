@@ -1,4 +1,3 @@
-
 // src/components/SystemModal.tsx
 import React from "react";
 import { useState } from "react";
@@ -35,6 +34,10 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     }
     return num.toLocaleString('pt-BR');
   };
+
+  // ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES
+  const isFeaturedSystem = system.isHighlight;
+  const isNewSystem = system.isNew;
 
   // Corrigir: garantir que rating seja sempre um número
   const getRatingNumber = (rating: any): number => {
@@ -210,11 +213,20 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                   <h2 className="text-2xl line-clamp-2 pr-2 font-semibold break-words">
                     {system.name}
                   </h2>
-                  {system.isNew && (
-                    <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 flex-shrink-0">
-                      NOVO
-                    </Badge>
-                  )}
+                  
+                  {/* ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES */}
+                  <div className="flex gap-2 flex-shrink-0">
+                    {isFeaturedSystem && (
+                      <Badge variant="destructive" className="bg-red-500 hover:bg-red-600">
+                        DESTAQUE
+                      </Badge>
+                    )}
+                    {isNewSystem && (
+                      <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600">
+                        NOVO
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <p className="text-gray-600 mt-2 break-words">{system.description}</p>
                 
@@ -233,7 +245,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                   )}
                   
                   {/* ✅ AGORA VAI MOSTRAR OS ACESSOS CORRETAMENTE */}
-                  {/* <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4 text-blue-600" />
                     <span className="font-semibold text-blue-600">
                       {formatNumber(system.usageCount || 0)} acessos
@@ -245,7 +257,7 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                       <Download className="h-4 w-4 text-green-600" />
                       <span className="font-semibold text-green-600">{formatNumber(system.downloads)} downloads</span>
                     </div>
-                  )} */}
+                  )}
                 </div>
               </div>
             </div>
