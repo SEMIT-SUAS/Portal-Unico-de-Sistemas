@@ -218,24 +218,110 @@ app.use('*', (req, res) => {
   });
 });
 
-// Inicializar servidor
+// Importar módulo net para verificação de porta
+import * as net from 'net';
+
+// Função para verificar se a porta está disponível
+const isPortAvailable = (port: number): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const tester = net.createServer()
+      .once('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`❌ Porta ${port} está ocupada`);
+          resolve(false);
+        } else {
+          resolve(false);
+        }
+      })
+      .once('listening', () => {
+        tester.once('close', () => resolve(true)).close();
+      })
+      .listen(port);
+  });
+};
+
+// Função para encontrar porta disponível
+const findAvailablePort = async (startPort: number, maxAttempts: number = 10): Promise<number> => {
+  for (let port = startPort; port <= startPort + maxAttempts; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+    console.log(`🔄 Tentando porta ${port + 1}...`);
+  }
+  throw new Error(`❌ Não foi possível encontrar porta disponível após ${maxAttempts} tentativas`);
+};
+
+// Inicializar servidor com tratamento de porta
 const startServer = async () => {
   try {
     await initDatabase();
     
-    app.listen(config.port, () => {
-      console.log(`\n🚀 Servidor rodando na porta ${config.port}`);
-
-      console.log(`✅ ROTA DE DOWNLOADS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-downloads`);
-      console.log(`✅ ROTA DE ACESSOS DISPONÍVEL: POST http://localhost:${config.port}/api/systems/1/increment-access`);
-      console.log(`🔍 Health check: http://localhost:${config.port}/health\n`);
-
+    const desiredPort = config.port;
+    const actualPort = await findAvailablePort(desiredPort);
+    
+    if (actualPort !== desiredPort) {
+      console.log(`⚠️  Porta ${desiredPort} ocupada. Usando porta ${actualPort}...`);
+    }
+    
+    app.listen(actualPort, () => {
+      console.log(`\n🚀 Servidor rodando na porta ${actualPort}`);
+      console.log(`✅ ROTA DE DOWNLOADS DISPONÍVEL: POST http://localhost:${actualPort}/api/systems/1/increment-downloads`);
+      console.log(`✅ ROTA DE ACESSOS DISPONÍVEL: POST http://localhost:${actualPort}/api/systems/1/increment-access`);
+      console.log(`🔍 Health check: http://localhost:${actualPort}/health\n`);
+      
+      // Salvar a porta atual em uma variável global para uso futuro
+      (global as any).actualPort = actualPort;
     });
+    
   } catch (error) {
     console.error('❌ Falha ao iniciar servidor:', error);
-    process.exit(1);
+    
+    // Tentativa de fallback - matar processo na porta e tentar novamente
+    if (error instanceof Error && error.message.includes('Não foi possível encontrar porta disponível')) {
+      console.log('🔄 Tentando solução alternativa...');
+      try {
+        const { execSync } = require('child_process');
+        console.log('🔫 Matando processo na porta 3001...');
+        execSync('npx kill-port 3001', { stdio: 'inherit' });
+        
+        // Aguardar e tentar novamente
+        setTimeout(() => {
+          console.log('🔄 Reiniciando servidor...');
+          app.listen(config.port, () => {
+            console.log(`\n🚀 Servidor rodando na porta ${config.port} (após limpeza)`);
+          });
+        }, 2000);
+      } catch (fallbackError) {
+        console.error('❌ Falha na solução alternativa:', fallbackError);
+        process.exit(1);
+      }
+    } else {
+      process.exit(1);
+    }
   }
 };
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n🔴 Recebido SIGINT. Encerrando servidor...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🔴 Recebido SIGTERM. Encerrando servidor...');
+  process.exit(0);
+});
+
+// Tratamento de erros não capturados
+process.on('uncaughtException', (error) => {
+  console.error('💥 Erro não capturado:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Promise rejeitada não tratada:', reason);
+  process.exit(1);
+});
 
 startServer();
 

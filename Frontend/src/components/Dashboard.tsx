@@ -1,6 +1,7 @@
 // components/Dashboard.tsx
+import React from "react";
 import { DigitalSystem } from "../data/systems";
-import { Building, Users, Download, Star, MessageSquare } from "lucide-react";
+import { Building, Star, MessageSquare } from "lucide-react";
 
 interface DashboardProps {
   systems: DigitalSystem[];

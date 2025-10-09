@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Header } from "./components/Header";
 import { CategoryNav } from "./components/CategoryNav";
 import { Dashboard } from "./components/Dashboard";
@@ -8,6 +8,7 @@ import { SystemModal } from "./components/SystemModal";
 import { useSystems, useDashboard } from "./hooks/useSystems";
 import { systemService } from "./services/api.ts";
 import { DigitalSystem, categories, departmentCategories } from "./data/systems";
+import React from "react";
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState("");

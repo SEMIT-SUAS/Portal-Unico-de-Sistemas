@@ -1,7 +1,9 @@
+import React from "react";
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
 // Corrigindo a importação da imagem
-import logoSaoLuis from "../assets/f95aa73053455c41831cdd38cc0842368a9337c1.png";
+import logoSaoLuis from "../assets/logosaoluis.png";
+
 
 interface HeaderProps {
   searchTerm: string;
@@ -18,8 +20,8 @@ export function Header({ searchTerm, onSearchChange }: HeaderProps) {
             <div className="bg-white rounded-lg p-3 flex items-center justify-center">
               <img 
                 src={logoSaoLuis}
-                alt="Brasão da Prefeitura de São Luís"
-                className="w-16 h-16 object-contain"
+                alt="Prefeitura de São Luís"
+                style={{ width: '45px', height: 'auto' }}
               />
             </div>
             <div>

@@ -1,8 +1,10 @@
 # Arquivo .gitignore na raiz do projeto
 
+node_modules
+
 # Backend (ex: Node.js)
 # =====================
-node_modules/
+Backend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -17,7 +19,7 @@ coverage/
 # Frontend (ex: React/Vue)
 # ========================
 # Dependências
-/node_modules
+Frontend/node_modules/
 /.pnp
 .pnp.js
 

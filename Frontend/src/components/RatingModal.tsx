@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import { Star, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
