@@ -233,7 +233,9 @@ export const departmentCategories = {
   'tecnologia': 'Tecnologia',
   'transito-transporte': 'Trânsito e Transporte',
   'cultura': 'Cultura',
-  'urbanismo': 'Urbanismo e Habitação'
+  'urbanismo': 'Urbanismo e Habitação',
+  'comunicacao': "Comunicação",
+  'turismo': 'Turismo'
 };
 
 export const secretaries = {
@@ -246,5 +248,7 @@ export const secretaries = {
   'SEMED': 'Secretaria Municipal de Educação',
   'SEMTT': 'Secretaria Municipal de Trânsito e Transporte',
   'SECULT': 'Secretaria Municipal de Cultura',
-  'SEMAS': 'Secretaria Municipal de Assistência Social'
+  'SEMAS': 'Secretaria Municipal de Assistência Social',
+  'SECOM': 'Secretaria Municipal de Comunicação',
+  'SETUR': 'Secretaria Municipal de Turismo'
 };

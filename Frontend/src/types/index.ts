@@ -49,5 +49,7 @@ export const departmentCategories = {
   'tecnologia': 'Tecnologia',
   'transito-transporte': 'Trânsito e Transporte',
   'cultura': 'Cultura',
-  'urbanismo': 'Urbanismo e Habitação'
+  'urbanismo': 'Urbanismo e Habitação',
+  'comunicacao': "Comunicação",
+  'turismo' : 'Turismo'
 } as const;
