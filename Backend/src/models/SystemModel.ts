@@ -27,10 +27,13 @@ export class SystemModel {
             'date', ur.date::text
           )
         ) as reviews,
-        -- Calcular se é novo baseado na data
-        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date,
-        -- CALCULO CORRIGIDO: usar DATE_PART em vez de EXTRACT
-        DATE_PART('day', CURRENT_DATE - ds.created_at) as days_since_creation
+        -- ✅ CORREÇÃO: Calcular se é novo baseado na data E na coluna is_new
+        (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date,
+        -- ✅ CORREÇÃO: Calcular dias desde criação apenas se is_new = true
+        CASE 
+          WHEN ds.is_new THEN DATE_PART('day', CURRENT_DATE - ds.created_at) 
+          ELSE NULL 
+        END as days_since_creation
       FROM digital_systems ds
       LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
       LEFT JOIN system_features sf ON ds.id = sf.system_id
@@ -59,15 +62,15 @@ export class SystemModel {
       params.push(`%${filters.search}%`);
     }
     
-    // Filtro por sistemas novos (baseado na data)
+    // ✅ CORREÇÃO: Filtro por sistemas novos (baseado na data E is_new = true)
     if (filters.recentlyAdded !== undefined) {
-      whereClauses.push(`ds.created_at >= CURRENT_DATE - INTERVAL '60 days'`);
+      whereClauses.push(`ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days'`);
     }
     
-    // Mantém o filtro antigo por compatibilidade
+    // ✅ CORREÇÃO: Mantém o filtro antigo por compatibilidade
     if (filters.isNew !== undefined) {
       paramCount++;
-      whereClauses.push(`(ds.is_new = $${paramCount} OR ds.created_at >= CURRENT_DATE - INTERVAL '60 days')`);
+      whereClauses.push(`(ds.is_new = $${paramCount} AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days')`);
       params.push(filters.isNew);
     }
     
@@ -112,8 +115,13 @@ export class SystemModel {
             'date', ur.date::text
           )
         ) as reviews,
-        EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE)) as days_since_creation,
-        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
+        -- ✅ CORREÇÃO: Calcular dias apenas se is_new = true
+        CASE 
+          WHEN ds.is_new THEN EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE))
+          ELSE NULL 
+        END as days_since_creation,
+        -- ✅ CORREÇÃO: Considerar is_new na verificação
+        (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
       FROM digital_systems ds
       LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
       LEFT JOIN system_features sf ON ds.id = sf.system_id
@@ -148,7 +156,7 @@ export class SystemModel {
     return this.findAll({ isHighlight: true });
   }
 
-  // Buscar sistemas novos (agora baseado na data)
+  // Buscar sistemas novos (agora baseado na data E is_new = true)
   static async findNewSystems(): Promise<ApiDigitalSystem[]> {
     return this.findAll({ recentlyAdded: true });
   }
@@ -158,19 +166,25 @@ export class SystemModel {
     return this.findAll({ search: query });
   }
 
-  // NOVO: Buscar sistemas recentes (últimos 60 dias)
+  // NOVO: Buscar sistemas recentes (últimos 60 dias E is_new = true)
   static async findRecentSystems(limit?: number): Promise<ApiDigitalSystem[]> {
     let query = `
       SELECT 
         ds.*,
         s.name as secretary_name,
         json_agg(DISTINCT sf.feature) as features,
-        EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE)) as days_since_creation,
-        (ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
+        -- ✅ CORREÇÃO: Calcular dias apenas se is_new = true
+        CASE 
+          WHEN ds.is_new THEN EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE))
+          ELSE NULL 
+        END as days_since_creation,
+        -- ✅ CORREÇÃO: Considerar is_new na verificação
+        (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
       FROM digital_systems ds
       LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
       LEFT JOIN system_features sf ON ds.id = sf.system_id
-      WHERE ds.created_at >= CURRENT_DATE - INTERVAL '60 days'
+      -- ✅ CORREÇÃO: Filtro considerando is_new
+      WHERE ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days'
       GROUP BY ds.id, s.name
       ORDER BY ds.created_at DESC
     `;
@@ -319,6 +333,24 @@ export class SystemModel {
     }
   }
 
+  // ✅ NOVO MÉTODO: Atualizar automaticamente sistemas que passaram do período de novidade
+  static async updateNewStatus(): Promise<void> {
+    const query = `
+      UPDATE digital_systems 
+      SET is_new = false, updated_at = NOW()
+      WHERE is_new = true 
+      AND created_at < CURRENT_DATE - INTERVAL '60 days'
+    `;
+    
+    try {
+      const result = await pool.query(query);
+      console.log(`🔄 Sistemas atualizados: ${result.rowCount} sistemas saíram do status "novo"`);
+    } catch (error) {
+      console.error('Error updating new status:', error);
+      throw new Error('Failed to update new status');
+    }
+  }
+
   // Contar sistemas por categoria
   static async countByCategory(): Promise<Record<string, number>> {
     const query = `
@@ -457,17 +489,20 @@ export class SystemModel {
   private static mapToApiFormat(row: any): ApiDigitalSystem {
     const isNewByDate = row.is_new_by_date;
     const daysSinceCreation = row.days_since_creation;
-  
-   // ✅ DEBUG: Log para verificar os valores do banco
+
+    // ✅ DEBUG: Log para verificar os valores do banco
     console.log('🔍 DEBUG SystemModel - Valores do banco:', {
       id: row.id,
       name: row.name,
+      is_new: row.is_new,
+      is_new_by_date: isNewByDate,
+      days_since_creation: daysSinceCreation,
+      created_at: row.created_at,
       usage_count: row.usage_count,
       downloads: row.downloads,
       usage_count_type: typeof row.usage_count
     });
 
-    
     return {
       id: row.id,
       name: row.name,
@@ -478,7 +513,8 @@ export class SystemModel {
       launchYear: row.launch_year,
       category: row.category,
       isHighlight: row.is_highlight,
-      isNew: row.is_new || isNewByDate,
+      // ✅ CORREÇÃO: Considerar tanto is_new do banco quanto a data
+      isNew: row.is_new && isNewByDate,
       iconUrl: row.icon_url,
       accessUrl: row.access_url,
       // ✅ CORRIGIDO: Mapear usage_count para usageCount
@@ -497,7 +533,8 @@ export class SystemModel {
       updatedAt: row.updated_at,
       daysSinceCreation: daysSinceCreation,
       isNewByDate: isNewByDate,
-      daysRemaining: isNewByDate ? Math.max(0, 60 - (daysSinceCreation || 0)) : 0
+      // ✅ CORREÇÃO: Calcular dias restantes apenas se for novo
+      daysRemaining: (row.is_new && isNewByDate) ? Math.max(0, 60 - (daysSinceCreation || 0)) : 0
     };
   }
 }
