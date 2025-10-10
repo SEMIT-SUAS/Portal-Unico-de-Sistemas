@@ -54,9 +54,12 @@ export default function App() {
         'fazenda-financas': ['SEMFAZ'],
         'planejamento': ['SEPLAN'],
         'tecnologia': ['SEMIT'],
-        'transito-transporte': ['SEMTT'],
+        'transito-transporte': ['SMTT'],
         'cultura': ['SECULT'],
-        'urbanismo': ['SEMURH']
+        'urbanismo': ['SEMURH'],
+        'comunicacao': ['SECOM'],
+        'turismo': ['SETUR'],
+        'seguranca': ['SEMUSC']
       };
       
       const relevantSecretaries = departmentMap[selectedDepartment] || [];

@@ -235,7 +235,8 @@ export const departmentCategories = {
   'cultura': 'Cultura',
   'urbanismo': 'Urbanismo e Habitação',
   'comunicacao': "Comunicação",
-  'turismo': 'Turismo'
+  'turismo': 'Turismo',
+  'seguranca': 'Segurança'
 };
 
 export const secretaries = {
@@ -246,9 +247,10 @@ export const secretaries = {
   'SEMFAZ': 'Secretaria Municipal da Fazenda',
   'SEMAPA': 'Secretaria Municipal de Meio Ambiente e Proteção Animal',
   'SEMED': 'Secretaria Municipal de Educação',
-  'SEMTT': 'Secretaria Municipal de Trânsito e Transporte',
+  'SMTT': 'Secretaria Municipal de Trânsito e Transporte',
   'SECULT': 'Secretaria Municipal de Cultura',
   'SEMAS': 'Secretaria Municipal de Assistência Social',
   'SECOM': 'Secretaria Municipal de Comunicação',
-  'SETUR': 'Secretaria Municipal de Turismo'
+  'SETUR': 'Secretaria Municipal de Turismo',
+  'SEMUSC': 'Secretaria Municipal de Segurança com Cidadania'
 };
