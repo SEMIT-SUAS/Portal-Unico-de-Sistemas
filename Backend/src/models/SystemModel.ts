@@ -102,6 +102,11 @@ export class SystemModel {
 
   // Buscar sistema por ID
   static async findById(id: number): Promise<ApiDigitalSystem | null> {
+  const client = await pool.connect();
+  
+  try {
+    console.log('🔍 [MODEL] Buscando sistema por ID:', id);
+    
     const query = `
       SELECT 
         ds.*,
@@ -132,16 +137,37 @@ export class SystemModel {
       GROUP BY ds.id, s.name
     `;
     
-    try {
-      const result = await pool.query(query, [id]);
-      if (result.rows.length === 0) return null;
-      
-      return this.mapToApiFormat(result.rows[0]);
-    } catch (error) {
-      console.error('Error fetching system by ID:', error);
-      throw new Error('Failed to fetch system');
+    console.log('📝 [MODEL] Executando query para sistema ID:', id);
+    
+    const result = await client.query(query, [id]);
+    
+    console.log('📊 [MODEL] Resultado da query:', {
+      rowsCount: result.rows.length,
+      systemId: id
+    });
+    
+    if (result.rows.length === 0) {
+      console.log('⚠️ [MODEL] Sistema não encontrado:', id);
+      return null;
     }
+    
+    const system = this.mapToApiFormat(result.rows[0]);
+    console.log('✅ [MODEL] Sistema encontrado e mapeado:', {
+      id: system.id,
+      name: system.name,
+      reviewsCount: system.reviewsCount,
+      rating: system.rating
+    });
+    
+    return system;
+  } catch (error) {
+    console.error('❌ [MODEL] Erro ao buscar sistema por ID:', error);
+    console.error('❌ [MODEL] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    throw new Error(`Failed to fetch system: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+  } finally {
+    client.release();
   }
+}
 
   // Buscar sistemas por categoria
   static async findByCategory(category: string): Promise<ApiDigitalSystem[]> {
@@ -380,7 +406,9 @@ export class SystemModel {
     
     try {
       const result = await pool.query(query);
-      return result.rows.reduce((acc: Record<string, number>, row) => {
+      
+      // ✅ CORREÇÃO: Adicionar tipos explicitamente
+      return result.rows.reduce((acc: Record<string, number>, row: any) => {
         acc[row.category] = parseInt(row.count);
         return acc;
       }, {});
@@ -414,7 +442,9 @@ export class SystemModel {
     
     try {
       const result = await pool.query(query);
-      return result.rows.reduce((acc: Record<string, number>, row) => {
+      
+      // ✅ CORREÇÃO: Adicionar tipos explicitamente
+      return result.rows.reduce((acc: Record<string, number>, row: any) => {
         acc[row.department] = parseInt(row.count);
         return acc;
       }, {});
@@ -424,7 +454,7 @@ export class SystemModel {
     }
   }
 
-  // Adicionar uma nova avaliação
+  // ✅✅✅ CORREÇÃO CRÍTICA: Adicionar uma nova avaliação - COM ATUALIZAÇÃO DE RATING E CONTAGEM
   static async addReview(systemId: number, reviewData: {
     userName: string;
     rating: number;
@@ -442,84 +472,177 @@ export class SystemModel {
     const client = await pool.connect();
     
     try {
+      console.log('💽 [MODEL] Iniciando transação para avaliação do sistema:', systemId);
+      console.log('📝 [MODEL] Dados da avaliação:', JSON.stringify(reviewData, null, 2));
+      
       await client.query('BEGIN');
 
-      // Inserir a avaliação
+      // 1. Primeiro, verificar se o sistema existe
+      const systemCheck = await client.query(
+        'SELECT id, name, reviews_count, rating FROM digital_systems WHERE id = $1',
+        [systemId]
+      );
+      
+      if (systemCheck.rows.length === 0) {
+        throw new Error(`Sistema com ID ${systemId} não encontrado`);
+      }
+
+      console.log('✅ [MODEL] Sistema encontrado:', systemCheck.rows[0]);
+
+      // 2. Inserir a avaliação na tabela user_reviews
       const reviewQuery = `
         INSERT INTO user_reviews (system_id, user_name, rating, comment, date)
         VALUES ($1, $2, $3, $4, CURRENT_DATE)
         RETURNING id
       `;
       
+      console.log('📝 [MODEL] Executando query de review...');
+      
       const reviewResult = await client.query(reviewQuery, [
         systemId,
         reviewData.userName,
         reviewData.rating,
-        reviewData.comment
+        reviewData.comment || ''
       ]);
 
       const reviewId = reviewResult.rows[0].id;
+      console.log('✅ [MODEL] Review inserido com ID:', reviewId);
 
-      // Se houver dados demográficos, inserir em uma tabela separada
+      // 3. Se houver dados demográficos, inserir na tabela user_demographics
       if (reviewData.demographics) {
-        const demographicsQuery = `
-          INSERT INTO user_demographics (review_id, cor, sexo, idade, latitude, longitude)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `;
-        
-        await client.query(demographicsQuery, [
-          reviewId,
-          reviewData.demographics.cor,
-          reviewData.demographics.sexo,
-          reviewData.demographics.idade,
-          reviewData.location?.latitude || null,
-          reviewData.location?.longitude || null
-        ]);
+        try {
+          const tableCheck = await client.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_schema = 'public' 
+              AND table_name = 'user_demographics'
+            );
+          `);
+
+          if (tableCheck.rows[0].exists) {
+            const demographicsQuery = `
+              INSERT INTO user_demographics (review_id, cor, sexo, idade, latitude, longitude)
+              VALUES ($1, $2, $3, $4, $5, $6)
+            `;
+            
+            await client.query(demographicsQuery, [
+              reviewId,
+              reviewData.demographics.cor,
+              reviewData.demographics.sexo,
+              reviewData.demographics.idade,
+              reviewData.location?.latitude || null,
+              reviewData.location?.longitude || null
+            ]);
+            console.log('✅ [MODEL] Dados demográficos inseridos');
+          } else {
+            console.log('⚠️ [MODEL] Tabela user_demographics não existe, pulando...');
+          }
+        } catch (demographicsError) {
+          console.log('⚠️ [MODEL] Erro ao inserir dados demográficos, continuando...', demographicsError);
+        }
       }
 
-      // Atualizar a contagem de avaliações e rating médio do sistema
+      // 4. ✅✅✅ CORREÇÃO CRÍTICA: Atualizar rating e reviews_count de forma mais robusta
       const updateSystemQuery = `
+        WITH review_stats AS (
+          SELECT 
+            COUNT(*) as total_reviews,
+            AVG(rating::numeric) as avg_rating
+          FROM user_reviews 
+          WHERE system_id = $1
+        )
         UPDATE digital_systems 
         SET 
-          rating = (
-            SELECT AVG(rating) FROM user_reviews WHERE system_id = $1
-          ),
-          reviews_count = (
-            SELECT COUNT(*) FROM user_reviews WHERE system_id = $1
-          ),
+          rating = COALESCE((SELECT avg_rating FROM review_stats), 0),
+          reviews_count = COALESCE((SELECT total_reviews FROM review_stats), 0),
           updated_at = NOW()
         WHERE id = $1
+        RETURNING rating, reviews_count
       `;
       
-      await client.query(updateSystemQuery, [systemId]);
+      const updateResult = await client.query(updateSystemQuery, [systemId]);
+      const updatedStats = updateResult.rows[0];
+      
+      console.log('✅ [MODEL] Sistema atualizado com novas estatísticas:', {
+        newRating: updatedStats.rating,
+        newReviewsCount: updatedStats.reviews_count,
+        systemId: systemId
+      });
 
       await client.query('COMMIT');
+      console.log('💾 [MODEL] Transação concluída com sucesso');
       return true;
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error adding review:', error);
-      throw new Error('Failed to add review');
+      console.error('❌ [MODEL] Erro na transação:', error);
+      throw new Error(`Failed to add review: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       client.release();
     }
   }
 
-  // ✅ MÉTODO CORRIGIDO: Mapear do formato do banco para o formato da API
+  // ✅✅✅ CORREÇÃO CRÍTICA: Mapear do formato do banco para o formato da API
   private static mapToApiFormat(row: any): ApiDigitalSystem {
     const isNewByDate = row.is_new_by_date;
     const daysSinceCreation = row.days_since_creation;
 
-    // ✅ DEBUG: Log para verificar os valores do banco
-    console.log('🔍 DEBUG SystemModel - Valores do banco:', {
+    // ✅ DEBUG ESPECÍFICO PARA RATING E REVIEWS
+    console.log('🔍 DEBUG SystemModel - RATING & REVIEWS INFO:', {
       id: row.id,
       name: row.name,
-      is_new: row.is_new,
-      is_new_by_date: isNewByDate,
-      days_since_creation: daysSinceCreation,
-      created_at: row.created_at,
-      usage_count: row.usage_count,
-      downloads: row.downloads,
-      usage_count_type: typeof row.usage_count
+      rating: row.rating,
+      rating_type: typeof row.rating,
+      reviews_count: row.reviews_count,
+      user_reviews_length: row.reviews?.length || 0,
+      reviews_ratings: row.reviews?.map((r: any) => r.rating) || []
+    });
+
+    // ✅ CORREÇÃO: Mapear as reviews corretamente
+    const userReviews = (row.reviews || [])
+      .filter((r: any) => r.id !== null && r.id !== undefined)
+      .map((review: any) => ({
+        id: review.id,
+        userName: review.userName,
+        rating: review.rating,
+        comment: review.comment,
+        date: review.date
+      }));
+
+    // ✅ CORREÇÃO CRÍTICA: Calcular rating correto
+    const calculateCorrectRating = (): number => {
+      // Se temos rating do banco e é válido, usar ele
+      const dbRating = parseFloat(row.rating);
+      if (!isNaN(dbRating) && dbRating > 0) {
+        console.log('📊 Usando rating do banco:', dbRating);
+        return dbRating;
+      }
+      
+      // Se não, calcular a partir das reviews
+      if (userReviews.length > 0) {
+        // ✅ CORREÇÃO: Adicionar tipos explicitamente para sum e review
+        const avgRating = userReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / userReviews.length;
+        const calculatedRating = parseFloat(avgRating.toFixed(1));
+        console.log('📊 Calculando rating das reviews:', calculatedRating);
+        return calculatedRating;
+      }
+      
+      console.log('📊 Rating padrão: 0');
+      return 0;
+    };
+
+    const finalRating = calculateCorrectRating();
+
+    // ✅ CORREÇÃO CRÍTICA: Garantir que reviewsCount use o valor CORRETO do banco
+    const reviewsCountFromDb = Number(row.reviews_count) || 0;
+    const reviewsCountFromArray = userReviews.length;
+    const finalReviewsCount = Math.max(reviewsCountFromDb, reviewsCountFromArray);
+
+    console.log('📊 DEBUG SystemModel - RATING & COUNT FINAL:', {
+      ratingFromDb: row.rating,
+      ratingCalculated: finalRating,
+      reviewsCountFromDb: reviewsCountFromDb,
+      reviewsCountFromArray: reviewsCountFromArray,
+      finalReviewsCount: finalReviewsCount
     });
 
     return {
@@ -532,27 +655,25 @@ export class SystemModel {
       launchYear: row.launch_year,
       category: row.category,
       isHighlight: row.is_highlight,
-      // ✅ CORREÇÃO DEFINITIVA: Considerar APENAS se is_new = true E menos de 60 dias
       isNew: Boolean(row.is_new && isNewByDate),
       iconUrl: row.icon_url,
       accessUrl: row.access_url,
-      // ✅ CORRIGIDO: Mapear usage_count para usageCount
       usageCount: Number(row.usage_count) || 0,
       downloads: row.downloads,
-      rating: row.rating,
-      reviewsCount: row.reviews_count,
+      // ✅ CORREÇÃO APLICADA: Usar o rating calculado corretamente
+      rating: finalRating,
+      // ✅ CORREÇÃO APLICADA: Usar a contagem correta
+      reviewsCount: finalReviewsCount,
       hasPWA: row.has_pwa,
       pwaUrl: row.pwa_url,
       mainFeatures: row.features || [],
-      userReviews: (row.reviews || []).filter((r: any) => r.id !== null),
+      userReviews: userReviews,
       secretaryName: row.secretary_name,
       developer: row.developer,
-      // Novos campos para a funcionalidade de tag NOVO
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       daysSinceCreation: daysSinceCreation,
       isNewByDate: isNewByDate,
-      // ✅ CORREÇÃO: Calcular dias restantes apenas se for novo (is_new = true E menos de 60 dias)
       daysRemaining: (row.is_new && isNewByDate) ? Math.max(0, 60 - (daysSinceCreation || 0)) : 0
     };
   }

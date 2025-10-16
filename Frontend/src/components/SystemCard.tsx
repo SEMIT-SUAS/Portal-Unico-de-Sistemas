@@ -49,15 +49,11 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
   };
 
   return (
-
-    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-32">
-      {/* REMOVIDA COMPLETAMENTE a div da tag NOVO */}
-
-      
-      <div className="h-full">
-        <div className="flex h-full p-4">
-          {/* Ícone no canto superior esquerdo */}
-          <div className={`w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 ${
+    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer"> {/* REMOVIDO h-32 */}
+      <div className="w-full">
+        <div className="flex p-4 items-center">
+          {/* Ícone */}
+          <div className={`w-21 h-20 rounded-lg overflow-hidden flex-shrink-0 ${
             isInactive 
               ? 'bg-gradient-to-br from-gray-100 to-gray-200' 
               : 'bg-gradient-to-br from-blue-100 to-yellow-100'
@@ -69,65 +65,44 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
             />
           </div>
           
-          {/* Conteúdo à direita do ícone */}
-          <div className="flex-1 ml-3 flex flex-col justify-between">
-            {/* Nome e tag INATIVO na mesma linha */}
-            <div onClick={handleCardClick} className="cursor-pointer">
-              <div className="flex items-start justify-between mb-2">
-                <CardTitle className={`text-sm leading-tight line-clamp-2 transition-colors flex-1 mr-2 ${
+          {/* Conteúdo à direita */}
+          <div className="flex-1 ml-3 flex flex-col justify-center min-h-0"> 
+            {/* Nome e tag INATIVO */}
+            <div className="flex items-start justify-between mb-1">
+              <div onClick={handleCardClick} className="cursor-pointer flex-1 mr-2 min-w-0">
+                <CardTitle className={`text-sm leading-tight line-clamp-2 transition-colors break-words ${
                   isInactive 
-                    ? 'text-gray-800' // Texto mais escuro para inativos
+                    ? 'text-gray-800'
                     : 'group-hover:text-blue-600'
                 }`}>
                   {system.name}
                 </CardTitle>
-                
-                {/* Tag INATIVO vermelha ao lado do nome */}
-                {isInactive && (
-                  <Badge variant="default" className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 flex items-center gap-1 shrink-0">
-                    <Ban className="h-3 w-3" />
-                    INATIVO
-                  </Badge>
-                )}
               </div>
               
-              {/* Informações de data - REMOVIDA A TAG "Xd restantes" */}
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center gap-1 text-xs ${
-                  isInactive ? 'text-gray-600' : 'text-gray-500' // Texto mais escuro para inativos
-                }">
-                  <Calendar className="h-3 w-3" />
-                  <span>{relativeTime}</span>
-                </div>
-
-                {/* REMOVIDA COMPLETAMENTE A TAG "Xd restantes" */}
-
-              </div>
-              
-              {/* Downloads e avaliação */}
-              <div className="flex items-center gap-4">
-                {system.downloads && (
-                  <div className="flex items-center gap-1 text-xs ${
-                    isInactive ? 'text-gray-600' : 'text-gray-600' // Texto mais escuro para inativos
-                  }">
-                    <Download className="h-3 w-3" />
-                    <span>{formatDownloads(system.downloads)}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-1 text-xs ${
-                  isInactive ? 'text-gray-600' : 'text-gray-600' // Texto mais escuro para inativos
-                }">
-                  <Star className={`h-3 w-3 ${isInactive ? 'text-gray-500' : 'fill-yellow-400 text-yellow-400'}`} />
-                  <span>{system.rating !== null && system.rating !== undefined ? Number(system.rating).toFixed(1) : '0.0'}</span>
-                  {system.reviewsCount && (
-                    <span className={isInactive ? 'text-gray-500' : 'text-gray-400'}>({system.reviewsCount})</span>
-                  )}
-                </div>
-              </div>
+              {/* Tag INATIVO */}
+              {isInactive && (
+                <Badge variant="default" className="bg-red-500 hover:bg-red-600 text-white text-xs px-1.5 py-0.5 flex items-center gap-1 shrink-0">
+                  <Ban className="h-2.5 w-2.5" />
+                  INATIVO
+                </Badge>
+              )}
             </div>
             
-          
+            {/* Secretaria Responsável */}
+            {system.responsibleSecretary && (
+              <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                <span className="line-clamp-1">{system.responsibleSecretary}</span>
+              </div>
+            )}
+            
+            {/* Avaliação */}
+            <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
+              <Star className={`h-3 w-3 ${isInactive ? 'text-gray-500' : 'fill-yellow-400 text-yellow-400'}`} />
+              <span>{system.rating !== null && system.rating !== undefined ? Number(system.rating).toFixed(1) : '0.0'}</span>
+              {system.reviewsCount && (
+                <span className={isInactive ? 'text-gray-500' : 'text-gray-400'}>({system.reviewsCount})</span>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import axios from 'axios';
 // PARA FRONTEND: Use import.meta.env (Vite) em vez de process.env
 //const API_BASE_URL =  'http://10.0.0.116:3001/api';
 const API_BASE_URL =  'https://sistemas.saoluis.ma.gov.br/api/api';
+//const API_BASE_URL =  '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -14,25 +15,29 @@ const api = axios.create({
 });
 
 // Interceptor para requests (apenas logging no dev)
-// api.interceptors.request.use(
-//   (config) => {
-//     if (import.meta.env.DEV) {
-//       console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     return Promise.reject(error);
-//   }
-// );
+api.interceptors.request.use(
+  (config) => {
+    if (import.meta.env.DEV) {
+      console.log(`🔧 [API] Request: ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`🔧 [API] Data:`, config.data);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Interceptor para responses
 api.interceptors.response.use(
   (response) => {
+    if (import.meta.env.DEV) {
+      console.log(`🔧 [API] Response: ${response.status} ${response.config.url}`);
+    }
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.response?.data || error.message);
+    console.error('❌ [API] Error:', error.response?.data || error.message);
     
     // Tratamento de erros específicos
     if (error.code === 'ECONNREFUSED') {
@@ -63,10 +68,27 @@ export const systemService = {
   getByCategory: (category: string) => api.get(`/systems/category/${category}`),
   getByDepartment: (department: string) => api.get(`/systems/department/${department}`),
   search: (query: string) => api.post('/systems/search', { query }),
-  addReview: (id: number, reviewData: any) => api.post(`/systems/${id}/review`, reviewData),
+  
+  addReview: (id: number, reviewData: any) => {
+    console.log('🔧 [API SERVICE] Enviando review para:', `/systems/${id}/review`);
+    console.log('🔧 [API SERVICE] Dados:', reviewData);
+    return api.post(`/systems/${id}/review`, reviewData);
+  },
+  
   incrementDownloads: (id: number) => api.post(`/systems/${id}/increment-downloads`),
   // ✅ NOVO SERVIÇO: Incrementar acessos
   incrementAccess: (id: number) => api.post(`/systems/${id}/increment-access`),
+  
+  // ✅ SERVIÇOS DE TESTE
+  testReview: (id: number, reviewData: any) => {
+    console.log('🧪 [API SERVICE] Teste review para:', `/systems/test/${id}`);
+    return api.post(`/systems/test/${id}`, reviewData);
+  },
+  
+  simpleReview: (id: number, reviewData: any) => {
+    console.log('🧪 [API SERVICE] Simple review para:', `/systems/simple/${id}`);
+    return api.post(`/systems/simple/${id}`, reviewData);
+  },
   
   // Novo método para dashboard com suporte a filtro por departamento
   getDashboardStats: (department?: string): Promise<{ data: DashboardStats }> => {

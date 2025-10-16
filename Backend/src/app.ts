@@ -10,8 +10,6 @@ dotenv.config();
 
 // Importar configurações DEPOIS do dotenv.config()
 import { config, validateConfig } from './config/app';
-import { corsOptions } from './config/cors';
-import { initDatabase } from './config/initDatabase';
 import pool from './config/database';
 import routes from './routes/index';
 
@@ -22,7 +20,24 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors(corsOptions));
+
+// ✅✅✅ CORREÇÃO DO CORS - CONFIGURAÇÃO PARA DESENVOLVIMENTO
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000', 
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'https://sistemas.saoluis.ma.gov.br',
+    'http://sistemas.saoluis.ma.gov.br'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+}));
+
+console.log('🌐 CORS configurado para desenvolvimento local');
+
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -30,6 +45,7 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ DEBUG: Middleware para log de todas as requisições
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.originalUrl}`);
+  console.log(`🌐 Origin: ${req.headers.origin}`);
   next();
 });
 
@@ -162,6 +178,59 @@ app.post('/api/systems/:id/increment-access', async (req, res) => {
   }
 });
 
+// ✅ ROTA DIRETA PARA REVIEWS (TESTE)
+app.post('/api/systems/:id/review', async (req, res) => {
+  let client;
+  try {
+    client = await pool.connect();
+    const id = parseInt(req.params.id);
+    
+    console.log('🎯 ROTA DIRETA DE REVIEW CHAMADA! ID:', id);
+    console.log('📋 Dados recebidos:', req.body);
+
+    const { userName, rating, comment } = req.body;
+
+    // Validar dados obrigatórios
+    if (!userName || !rating) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome de usuário e avaliação são obrigatórios'
+      });
+    }
+
+    // Inserir review
+    const reviewQuery = `
+      INSERT INTO user_reviews (system_id, user_name, rating, comment, date)
+      VALUES ($1, $2, $3, $4, CURRENT_DATE)
+      RETURNING id
+    `;
+    
+    const result = await client.query(reviewQuery, [
+      id,
+      userName,
+      rating,
+      comment || ''
+    ]);
+
+    console.log('✅ Review inserido com ID:', result.rows[0].id);
+
+    res.json({
+      success: true,
+      message: 'Avaliação adicionada com sucesso!',
+      reviewId: result.rows[0].id
+    });
+  } catch (error) {
+    console.error('❌ Erro na rota de review:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao adicionar avaliação',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
 // Registrar rotas normais
 app.use('/api', routes);
 
@@ -169,6 +238,7 @@ app.use('/api', routes);
 console.log('\n🔍 ROTAS REGISTRADAS:');
 console.log('POST /api/systems/:id/increment-downloads ✅ (Rota direta)');
 console.log('POST /api/systems/:id/increment-access ✅ (Rota direta)');
+console.log('POST /api/systems/:id/review ✅ (Rota direta)');
 
 // Rota de health check
 app.get('/health', async (req, res) => {
@@ -182,7 +252,8 @@ app.get('/health', async (req, res) => {
       environment: config.nodeEnv,
       timestamp: new Date().toISOString(),
       downloadRoute: 'POST /api/systems/:id/increment-downloads ✅',
-      accessRoute: 'POST /api/systems/:id/increment-access ✅'
+      accessRoute: 'POST /api/systems/:id/increment-access ✅',
+      reviewRoute: 'POST /api/systems/:id/review ✅'
     });
   } catch (error) {
     console.error('Health check error:', error);
@@ -201,7 +272,8 @@ app.get('/', (req, res) => {
     message: 'API do Portal Único de Sistemas - COM ROTAS DIRETAS',
     version: '1.0.0',
     downloadEndpoint: 'POST /api/systems/:id/increment-downloads ✅',
-    accessEndpoint: 'POST /api/systems/:id/increment-access ✅'
+    accessEndpoint: 'POST /api/systems/:id/increment-access ✅',
+    reviewEndpoint: 'POST /api/systems/:id/review ✅'
   });
 });
 
@@ -213,7 +285,8 @@ app.use('*', (req, res) => {
     message: `Rota não encontrada: ${req.method} ${req.originalUrl}`,
     availableRoutes: {
       download: 'POST /api/systems/:id/increment-downloads',
-      access: 'POST /api/systems/:id/increment-access'
+      access: 'POST /api/systems/:id/increment-access',
+      review: 'POST /api/systems/:id/review'
     }
   });
 });
@@ -254,6 +327,7 @@ const findAvailablePort = async (startPort: number, maxAttempts: number = 10): P
 // Inicializar servidor com tratamento de porta
 const startServer = async () => {
   try {
+    const { initDatabase } = await import('./config/initDatabase');
     await initDatabase();
     
     const desiredPort = config.port;
@@ -267,6 +341,7 @@ const startServer = async () => {
       console.log(`\n🚀 Servidor rodando na porta ${actualPort}`);
       console.log(`✅ ROTA DE DOWNLOADS DISPONÍVEL: POST http://localhost:${actualPort}/api/systems/1/increment-downloads`);
       console.log(`✅ ROTA DE ACESSOS DISPONÍVEL: POST http://localhost:${actualPort}/api/systems/1/increment-access`);
+      console.log(`✅ ROTA DE REVIEWS DISPONÍVEL: POST http://localhost:${actualPort}/api/systems/1/review`);
       console.log(`🔍 Health check: http://localhost:${actualPort}/health\n`);
       
       // Salvar a porta atual em uma variável global para uso futuro

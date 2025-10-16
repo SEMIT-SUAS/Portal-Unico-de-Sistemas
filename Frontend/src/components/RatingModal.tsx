@@ -17,6 +17,7 @@ interface RatingModalProps {
 }
 
 export interface RatingData {
+  userName: string; // Alterado para userName
   rating: number;
   comment: string;
   demographics: {
@@ -35,6 +36,7 @@ type CorOption = "branca" | "preta" | "parda" | "amarela" | "indigena" | "nao-in
 type SexoOption = "masculino" | "feminino" | "nao-binario" | "nao-informar";
 
 export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingModalProps) {
+  const [userName, setUserName] = useState(""); // Alterado para userName
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [demographics, setDemographics] = useState({
@@ -74,6 +76,10 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
   };
 
   const handleNextStep = () => {
+    if (!userName.trim()) { // Alterado para userName
+      alert('Por favor, informe seu nome');
+      return;
+    }
     if (rating === 0) {
       alert('Por favor, selecione uma avaliação');
       return;
@@ -92,8 +98,9 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
     }
 
     const ratingData: RatingData = {
+      userName: userName.trim(), // Alterado para userName
       rating,
-      comment,
+      comment: comment.trim(),
       demographics,
       location: location || undefined
     };
@@ -102,6 +109,7 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
     onClose();
     
     // Reset form
+    setUserName(""); // Alterado para userName
     setRating(0);
     setComment("");
     setDemographics({ cor: "", sexo: "", idade: 0 });
@@ -138,6 +146,19 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
 
         {step === 'rating' ? (
           <div className="space-y-6">
+            {/* Campo Nome Alterado para userName */}
+            <div>
+              <Label htmlFor="userName">Seu nome</Label>
+              <Input
+                id="userName"
+                type="text"
+                placeholder="Digite seu nome"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
             <div className="text-center">
               <h3 className="font-medium mb-2">Como você avalia o {systemName}?</h3>
               <div className="flex justify-center gap-1 mb-4">

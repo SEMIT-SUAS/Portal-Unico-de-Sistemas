@@ -132,41 +132,59 @@ export class SystemController {
 
   // Obter sistema por ID (MANTIDO)
   static async getSystemById(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID inválido'
-        });
-      }
-
-      const system = await SystemModel.findById(id);
-      if (!system) {
-        return res.status(404).json({
-          success: false,
-          message: 'Sistema não encontrado'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: system
-      });
-    } catch (error) {
-      console.error('Error fetching system:', error);
-      res.status(500).json({
+  let client;
+  try {
+    console.log('🎯 [CONTROLLER] getSystemById CHAMADO!');
+    console.log('🎯 [CONTROLLER] Params:', req.params);
+    
+    client = await pool.connect();
+    const id = parseInt(req.params.id);
+    
+    console.log('🔍 [CONTROLLER] Buscando sistema ID:', id);
+    
+    if (isNaN(id)) {
+      console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
+      return res.status(400).json({
         success: false,
-        message: 'Erro ao buscar sistema',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        message: 'ID inválido'
       });
-    } finally {
-      if (client) client.release();
     }
+
+    console.log('💾 [CONTROLLER] Chamando SystemModel.findById...');
+    const system = await SystemModel.findById(id);
+    
+    if (!system) {
+      console.log('❌ [CONTROLLER] Sistema não encontrado:', id);
+      return res.status(404).json({
+        success: false,
+        message: 'Sistema não encontrado'
+      });
+    }
+
+    console.log('✅ [CONTROLLER] Sistema encontrado:', {
+      id: system.id,
+      name: system.name,
+      reviewsCount: system.reviewsCount,
+      rating: system.rating
+    });
+
+    res.json({
+      success: true,
+      data: system
+    });
+  } catch (error) {
+    console.error('❌ [CONTROLLER] Erro ao buscar sistema:', error);
+    console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno ao buscar sistema',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  } finally {
+    if (client) client.release();
   }
+}
 
   // Obter sistemas por categoria (MANTIDO)
   static async getSystemsByCategory(req: Request, res: Response) {
@@ -254,61 +272,99 @@ export class SystemController {
     }
   }
 
-  // Adicionar avaliação (MANTIDO)
+  // ✅✅✅ CORRIGIDO: Adicionar avaliação - COM LOGS DETALHADOS
   static async addReview(req: Request, res: Response) {
-    let client;
-    try {
-      client = await pool.connect();
-      const id = parseInt(req.params.id);
-      
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID inválido'
-        });
-      }
-
-      const { userName, rating, comment, demographics, location } = req.body;
-
-      if (!userName || !rating) {
-        return res.status(400).json({
-          success: false,
-          message: 'Nome de usuário e avaliação são obrigatórios'
-        });
-      }
-
-      if (rating < 1 || rating > 5) {
-        return res.status(400).json({
-          success: false,
-          message: 'A avaliação deve ser entre 1 e 5'
-        });
-      }
-
-      await SystemModel.addReview(id, {
-        userName,
-        rating,
-        comment,
-        demographics,
-        location
-      });
-
-      res.json({
-        success: true,
-        message: 'Avaliação adicionada com sucesso'
-      });
-    } catch (error) {
-      console.error('Error adding review:', error);
-      res.status(500).json({
+  let client;
+  try {
+    console.log('🎯 [CONTROLLER] addReview CHAMADO!');
+    console.log('🎯 [CONTROLLER] URL:', req.url);
+    console.log('🎯 [CONTROLLER] Method:', req.method);
+    console.log('🎯 [CONTROLLER] Params:', req.params);
+    console.log('🎯 [CONTROLLER] Body:', JSON.stringify(req.body, null, 2));
+    
+    client = await pool.connect();
+    const id = parseInt(req.params.id);
+    
+    console.log('📥 [CONTROLLER] Recebendo avaliação para sistema ID:', id);
+    
+    if (isNaN(id)) {
+      console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
+      return res.status(400).json({
         success: false,
-        message: 'Erro ao adicionar avaliação',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        message: 'ID inválido'
       });
-    } finally {
-      if (client) client.release();
     }
-  }
 
-  // MÉTODO INCREMENT DOWNLOADS (MANTIDO)
+    const { userName, rating, comment, demographics, location } = req.body;
+
+    console.log('👤 [CONTROLLER] Dados extraídos:', {
+      userName,
+      rating,
+      comment,
+      demographics,
+      location
+    });
+
+    // Validações mais robustas
+    if (!userName || userName.trim() === '') {
+      console.log('❌ [CONTROLLER] Nome de usuário vazio');
+      return res.status(400).json({
+        success: false,
+        message: 'Nome de usuário é obrigatório'
+      });
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      console.log('❌ [CONTROLLER] Rating inválido:', rating);
+      return res.status(400).json({
+        success: false,
+        message: 'A avaliação deve ser entre 1 e 5'
+      });
+    }
+
+    console.log('💾 [CONTROLLER] Chamando SystemModel.addReview...');
+    
+    // ✅ CORREÇÃO: Aguardar a conclusão e capturar possíveis erros
+    const result = await SystemModel.addReview(id, {
+      userName: userName.trim(),
+      rating: Number(rating),
+      comment: (comment || '').trim(),
+      demographics,
+      location
+    });
+
+    console.log('✅ [CONTROLLER] Avaliação processada com sucesso, resultado:', result);
+
+    // ✅ BUSCAR SISTEMA ATUALIZADO PARA RETORNAR DADOS CORRETOS
+    console.log('🔄 [CONTROLLER] Buscando sistema atualizado...');
+    const updatedSystem = await SystemModel.findById(id);
+    
+    if (!updatedSystem) {
+      console.log('⚠️ [CONTROLLER] Sistema não encontrado após atualização');
+    }
+
+    console.log('✅ [CONTROLLER] Resposta enviada com sucesso');
+    
+    res.json({
+      success: true,
+      message: 'Avaliação adicionada com sucesso',
+      system: updatedSystem // ✅ RETORNAR SISTEMA ATUALIZADO
+    });
+  } catch (error) {
+    console.error('❌ [CONTROLLER] Erro ao adicionar avaliação:', error);
+    console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno ao adicionar avaliação',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  } finally {
+    if (client) client.release();
+  }
+}
+
+  // ✅ MÉTODO INCREMENT DOWNLOADS (MANTIDO)
   static async incrementDownloads(req: Request, res: Response) {
     let client;
     try {
@@ -381,7 +437,7 @@ export class SystemController {
         });
       }
 
-        // ✅ DEBUG: Log antes do incremento
+      // ✅ DEBUG: Log antes do incremento
       console.log('🔍 DEBUG - Antes do incremento:', {
         systemId: id,
         currentUsageCount: system.usageCount,
@@ -413,6 +469,120 @@ export class SystemController {
       res.status(500).json({
         success: false,
         message: 'Erro ao contabilizar acesso',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // ✅ MÉTODO DE TESTE TEMPORÁRIO
+  static async testReview(req: Request, res: Response) {
+    try {
+      console.log('🧪 [TEST] Endpoint de teste chamado');
+      console.log('📋 [TEST] Body recebido:', req.body);
+      console.log('🔍 [TEST] Params recebidos:', req.params);
+      
+      res.json({
+        success: true,
+        message: 'Teste funcionando',
+        received: {
+          body: req.body,
+          params: req.params
+        }
+      });
+    } catch (error) {
+      console.error('❌ [TEST] Erro no teste:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro no teste'
+      });
+    }
+  }
+
+  // ✅ MÉTODO SIMPLIFICADO TEMPORÁRIO
+  static async simpleReview(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const id = parseInt(req.params.id);
+      
+      console.log('🧪 [SIMPLE] Sistema ID:', id);
+      console.log('🧪 [SIMPLE] Dados:', req.body);
+
+      // Inserir diretamente sem transação complexa
+      const query = `
+        INSERT INTO user_reviews (system_id, user_name, rating, comment, date)
+        VALUES ($1, $2, $3, $4, CURRENT_DATE)
+        RETURNING id
+      `;
+      
+      const result = await client.query(query, [
+        id,
+        req.body.userName,
+        req.body.rating,
+        req.body.comment || ''
+      ]);
+
+      console.log('✅ [SIMPLE] Review inserido com ID:', result.rows[0].id);
+
+      res.json({
+        success: true,
+        message: 'Avaliação simples adicionada',
+        reviewId: result.rows[0].id
+      });
+    } catch (error) {
+      console.error('❌ [SIMPLE] Erro:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro na avaliação simples',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
+  // ✅ NOVO MÉTODO: Debug de reviews
+  static async debugReviews(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      const systemId = parseInt(req.params.id);
+      
+      const reviewStats = await client.query(`
+        SELECT 
+          ds.id,
+          ds.name,
+          ds.reviews_count as db_reviews_count,
+          COUNT(ur.id) as actual_reviews_count,
+          ds.rating as db_rating,
+          AVG(ur.rating)::numeric(10,2) as actual_rating
+        FROM digital_systems ds
+        LEFT JOIN user_reviews ur ON ds.id = ur.system_id
+        WHERE ds.id = $1
+        GROUP BY ds.id, ds.name, ds.reviews_count, ds.rating
+      `, [systemId]);
+
+      const reviews = await client.query(`
+        SELECT id, user_name, rating, comment, date
+        FROM user_reviews 
+        WHERE system_id = $1
+        ORDER BY date DESC
+      `, [systemId]);
+
+      res.json({
+        success: true,
+        systemId,
+        stats: reviewStats.rows[0] || {},
+        reviews: reviews.rows,
+        reviewCount: reviews.rows.length
+      });
+    } catch (error) {
+      console.error('Error in debugReviews:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro no debug',
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     } finally {

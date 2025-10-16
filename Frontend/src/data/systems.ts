@@ -23,6 +23,7 @@ export interface DigitalSystem {
   createdAt: string;
   updatedAT: string;
   isActive?: boolean; // Adicione esta propriedade
+  
 }
 
 export interface UserReview {

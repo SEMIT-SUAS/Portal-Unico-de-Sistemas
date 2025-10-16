@@ -16,15 +16,24 @@ interface SystemModalProps {
   system: DigitalSystem | null;
   onClose: () => void;
   onSystemUpdate?: (updatedSystem: DigitalSystem) => void;
+  onAddReview?: (systemId: number, ratingData: any) => Promise<boolean>;
 }
 
-export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProps) {
+export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: SystemModalProps) {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isAccessing, setIsAccessing] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   if (!system) return null;
+
+  console.log('🔍 [SYSTEMMODAL] Sistema carregado:', {
+    id: system.id,
+    name: system.name,
+    reviewsCount: system.reviewsCount,
+    userReviews: system.userReviews?.length || 0
+  });
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
@@ -35,11 +44,9 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     return num.toLocaleString('pt-BR');
   };
 
-  // ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES
   const isFeaturedSystem = system.isHighlight;
   const isNewSystem = system.isNew;
 
-  // Corrigir: garantir que rating seja sempre um número
   const getRatingNumber = (rating: any): number => {
     if (typeof rating === 'number') return rating;
     if (typeof rating === 'string') return parseFloat(rating) || 0;
@@ -56,131 +63,179 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
     ));
   };
 
-  // ✅ FUNÇÃO DE DOWNLOAD DO PWA ATUALIZADA
   const handlePwaDownload = async () => {
     if (!system || !system.hasPWA || !isValidUrl(system.pwaUrl)) return;
 
     try {
       setIsDownloading(true);
       
-      console.log(`📥 Iniciando download para: ${system.name} (ID: ${system.id})`);
-      console.log(`📊 Downloads atuais: ${system.downloads || 0}`);
+      console.log(`📥 [SYSTEMMODAL] Iniciando download para: ${system.name} (ID: ${system.id})`);
+      console.log(`📊 [SYSTEMMODAL] Downloads atuais: ${system.downloads || 0}`);
       
-      // 1. Contabilizar download no backend (BANCO DE DADOS REAL)
       try {
         const response = await systemService.incrementDownloads(system.id);
-        console.log('✅ Download contabilizado NO BANCO:', response.data);
+        console.log('✅ [SYSTEMMODAL] Download contabilizado NO BANCO:', response.data);
         
-        // 2. Atualizar o sistema localmente com o valor REAL do banco
+        const responseData = response.data as { newCount: number; success?: boolean; message?: string };
+        
         if (onSystemUpdate) {
           const updatedSystem: DigitalSystem = {
             ...system,
-            downloads: response.data.newCount // ✅ USA O VALOR REAL DO BANCO
+            downloads: responseData.newCount
           };
           onSystemUpdate(updatedSystem);
-          console.log('📊 Contador de downloads atualizado com valor REAL:', response.data.newCount);
+          console.log('📊 [SYSTEMMODAL] Contador de downloads atualizado com valor REAL:', responseData.newCount);
         }
       } catch (apiError) {
-        console.warn('⚠️ API de downloads falhou, mas continuando com o download...', apiError);
-        // Não impedir o download mesmo se a API falhar
+        console.warn('⚠️ [SYSTEMMODAL] API de downloads falhou, mas continuando com o download...', apiError);
       }
       
-      // 3. Abrir o link do PWA (sempre executa)
-      console.log(`🌐 Abrindo URL: ${system.pwaUrl}`);
+      console.log(`🌐 [SYSTEMMODAL] Abrindo URL: ${system.pwaUrl}`);
       window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
       
     } catch (error) {
-      console.error('❌ Erro inesperado durante download:', error);
+      console.error('❌ [SYSTEMMODAL] Erro inesperado durante download:', error);
       window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  // ✅ NOVA FUNÇÃO: ACESSAR SISTEMA COM CONTAGEM
   const handleSystemAccess = async () => {
     if (!system || !isValidUrl(system.accessUrl)) return;
 
     try {
       setIsAccessing(true);
       
-      console.log(`🚀 Iniciando acesso para: ${system.name} (ID: ${system.id})`);
-      console.log(`📈 Acessos atuais: ${system.usageCount || 0}`);
+      console.log(`🚀 [SYSTEMMODAL] Iniciando acesso para: ${system.name} (ID: ${system.id})`);
+      console.log(`📈 [SYSTEMMODAL] Acessos atuais: ${system.usageCount || 0}`);
       
-      // 1. Contabilizar acesso no backend (BANCO DE DADOS REAL)
       try {
         const response = await systemService.incrementAccess(system.id);
-        console.log('✅ Acesso contabilizado NO BANCO:', response.data);
+        console.log('✅ [SYSTEMMODAL] Acesso contabilizado NO BANCO:', response.data);
 
-         // ✅ CORREÇÃO: Garantir que newCount seja número
-        const newCount = Number(response.data.newCount) || (system.usageCount || 0) + 1;
+        const responseData = response.data as { newCount: number; success?: boolean; message?: string };
         
-        // 2. Atualizar o sistema localmente com o valor REAL do banco
+        const newCount = Number(responseData.newCount) || (system.usageCount || 0) + 1;
+        
         if (onSystemUpdate) {
           const updatedSystem: DigitalSystem = {
             ...system,
-            usageCount: newCount // ✅ USA O VALOR COVERTIDO PARA NUMERO
+            usageCount: newCount
           };
           onSystemUpdate(updatedSystem);
-          console.log('📈 Contador de acessos atualizado com valor REAL:', response.data.newCount);
+          console.log('📈 [SYSTEMMODAL] Contador de acessos atualizado com valor REAL:', responseData.newCount);
         }
       } catch (apiError) {
-        console.warn('⚠️ API de acessos falhou, mas continuando com o acesso...', apiError);
-        // Não impedir o acesso mesmo se a API falhar
+        console.warn('⚠️ [SYSTEMMODAL] API de acessos falhou, mas continuando com o acesso...', apiError);
       }
       
-      // 3. Abrir o link do sistema (sempre executa)
-      console.log(`🌐 Abrindo URL: ${system.accessUrl}`);
+      console.log(`🌐 [SYSTEMMODAL] Abrindo URL: ${system.accessUrl}`);
       window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
       
     } catch (error) {
-      console.error('❌ Erro inesperado durante acesso:', error);
+      console.error('❌ [SYSTEMMODAL] Erro inesperado durante acesso:', error);
       window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setIsAccessing(false);
     }
   };
 
-  const handleRatingSubmit = (ratingData: RatingData) => {
-    if (!system || !onSystemUpdate) return;
+  const handleRatingSubmit = async (ratingData: RatingData) => {
+    try {
+      console.log('📝 [SYSTEMMODAL] Dados da avaliação recebidos:', JSON.stringify(ratingData, null, 2));
+      
+      if (!system) {
+        console.error('❌ [SYSTEMMODAL] Sistema não definido');
+        return;
+      }
 
-    // Create new review
-    const newReview = {
-      id: Date.now().toString(),
-      userName: `Usuário${Math.floor(Math.random() * 1000)}`,
-      rating: ratingData.rating,
-      comment: ratingData.comment,
-      date: new Date().toISOString().split('T')[0]
-    };
+      console.log('🚀 [SYSTEMMODAL] Iniciando envio de avaliação para sistema ID:', system.id);
 
-    // Update system data
-    const currentReviews = system.userReviews || [];
-    const updatedReviews = [newReview, ...currentReviews];
-    
-    // Recalculate rating - garantir que seja número
-    const totalRating = updatedReviews.reduce((sum, review) => sum + review.rating, 0);
-    const newRating = totalRating / updatedReviews.length;
+      if (onAddReview && onSystemUpdate) {
+        console.log('🔄 [SYSTEMMODAL] Usando onAddReview do hook...');
+        setReviewLoading(true);
+        
+        const currentReviews = system.userReviews || [];
+        
+        const newReview = {
+          id: `temp-${Date.now()}`,
+          userName: ratingData.userName.trim(),
+          rating: ratingData.rating,
+          comment: ratingData.comment?.trim() || '',
+          date: new Date().toISOString().split('T')[0],
+          ...(ratingData.demographics && {
+            cor: ratingData.demographics.cor,
+            sexo: ratingData.demographics.sexo,
+            idade: ratingData.demographics.idade
+          })
+        };
+        
+        const updatedReviews = [newReview, ...currentReviews];
+        const newReviewsCount = updatedReviews.length;
+        
+        const totalRating = updatedReviews.reduce((sum: number, review: any) => sum + review.rating, 0);
+        const newRating = parseFloat((totalRating / newReviewsCount).toFixed(1));
+        
+        const optimisticSystem: DigitalSystem = {
+          ...system,
+          userReviews: updatedReviews,
+          reviewsCount: newReviewsCount,
+          rating: newRating
+        };
+        
+        console.log('🎯 [SYSTEMMODAL] Aplicando atualização otimista:', {
+          novasAvaliacoes: newReviewsCount,
+          novoRating: newRating,
+          reviewTemporaria: newReview.id
+        });
+        
+        onSystemUpdate(optimisticSystem);
+        console.log('✅ [SYSTEMMODAL] Atualização otimista aplicada - avaliação visível AGORA!');
+        
+        setShowRatingModal(false);
+        
+        try {
+          // ✅ CORREÇÃO: Converter system.id para número
+          const systemId = Number(system.id);
+          const success = await onAddReview(systemId, {
+            userName: ratingData.userName.trim(),
+            rating: ratingData.rating,
+            comment: ratingData.comment?.trim() || '',
+            demographics: ratingData.demographics,
+            location: ratingData.location
+          });
 
-    const updatedSystem: DigitalSystem = {
-      ...system,
-      userReviews: updatedReviews,
-      rating: newRating,
-      reviewsCount: updatedReviews.length
-    };
-
-    onSystemUpdate(updatedSystem);
-    
-    // Save demographic and location data (in real app, send to backend)
-    console.log('Rating submitted:', {
-      systemId: system.id,
-      rating: ratingData.rating,
-      comment: ratingData.comment,
-      demographics: ratingData.demographics,
-      location: ratingData.location
-    });
+          if (success) {
+            console.log('✅ [SYSTEMMODAL] Avaliação enviada com sucesso para o backend');
+            
+            console.log('✅ [SYSTEMMODAL] Avaliação sincronizada localmente - operação concluída');
+            
+          } else {
+            console.error('❌ [SYSTEMMODAL] Falha ao enviar avaliação para o backend');
+            console.warn('⚠️ [SYSTEMMODAL] Revertendo atualização otimista...');
+            onSystemUpdate(system);
+            alert('Erro ao enviar avaliação. Tente novamente.');
+          }
+        } catch (error) {
+          console.error('❌ [SYSTEMMODAL] Erro durante o envio para o backend:', error);
+          console.warn('⚠️ [SYSTEMMODAL] Revertendo atualização otimista devido a erro...');
+          onSystemUpdate(system);
+          alert('Erro ao enviar avaliação. Verifique os dados e tente novamente.');
+        }
+      } else {
+        console.error('❌ [SYSTEMMODAL] Funções de atualização não disponíveis');
+        alert('Erro: Sistema não configurado para receber avaliações.');
+      }
+      
+    } catch (error) {
+      console.error('❌ [SYSTEMMODAL] Erro ao processar avaliação:', error);
+      alert('Erro inesperado ao enviar avaliação. Tente novamente.');
+    } finally {
+      setReviewLoading(false);
+    }
   };
 
-  // Função simplificada para verificar URL válida
   const isValidUrl = (url: string | undefined) => {
     return url && url !== '#' && (url.startsWith('http://') || url.startsWith('https://'));
   };
@@ -188,7 +243,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
   const displayedReviews = system.userReviews?.slice(0, 3) || [];
   const hasMoreReviews = (system.userReviews?.length || 0) > 3;
 
-  // Obter rating numérico seguro
   const safeRating = getRatingNumber(system.rating);
 
   return (
@@ -214,7 +268,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                     {system.name}
                   </h2>
                   
-                  {/* ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES */}
                   <div className="flex gap-2 flex-shrink-0">
                     {isFeaturedSystem && (
                       <Badge variant="destructive" className="bg-red-500 hover:bg-red-600">
@@ -230,7 +283,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                 </div>
                 <p className="text-gray-600 mt-2 break-words">{system.description}</p>
                 
-                {/* Rating, Downloads e Acessos Stats */}
                 <div className="flex items-center gap-6 mt-3 flex-wrap">
                   {safeRating > 0 && (
                     <div className="flex items-center gap-2">
@@ -244,7 +296,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
                     </div>
                   )}
                   
-                  {/* ✅ AGORA VAI MOSTRAR OS ACESSOS CORRETAMENTE */}
                   <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4 text-blue-600" />
                     <span className="font-semibold text-blue-600">
@@ -264,7 +315,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* System Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
@@ -302,7 +352,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* Action Buttons ATUALIZADOS */}
             <div className="flex gap-3 flex-col sm:flex-row">
               <Button 
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
@@ -327,7 +376,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* About System */}
             <div>
               <h3 className="font-semibold mb-3">Sobre o Sistema</h3>
               <p className="text-gray-700 leading-relaxed break-words">{system.fullDescription}</p>
@@ -335,7 +383,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
 
             <Separator />
 
-            {/* Main Features */}
             <div>
               <h3 className="font-semibold mb-3">Principais Funcionalidades</h3>
               <div className="grid gap-2">
@@ -348,22 +395,24 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
               </div>
             </div>
 
-            {/* User Reviews */}
             {(displayedReviews.length > 0 || !system.userReviews?.length) && (
               <>
                 <Separator />
                 <div>
                   <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-2">
                     <h3 className="font-semibold">Avaliações dos Usuários</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowRatingModal(true)}
-                      className="gap-2"
-                    >
-                      <Star className="h-4 w-4" />
-                      Avaliar
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowRatingModal(true)}
+                        className="gap-2"
+                        disabled={reviewLoading}
+                      >
+                        <Star className="h-4 w-4" />
+                        {reviewLoading ? 'Enviando...' : 'Avaliar'}
+                      </Button>
+                    </div>
                   </div>
                   
                   {displayedReviews.length > 0 ? (
@@ -408,7 +457,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
               </>
             )}
 
-            {/* Close Button */}
             <div className="flex justify-end pt-4">
               <Button 
                 variant="outline" 
@@ -422,7 +470,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
         </DialogContent>
       </Dialog>
 
-      {/* Reviews Modal */}
       <ReviewsModal
         reviews={system.userReviews || []}
         systemName={system.name}
@@ -430,7 +477,6 @@ export function SystemModal({ system, onClose, onSystemUpdate }: SystemModalProp
         onClose={() => setShowAllReviews(false)}
       />
 
-      {/* Rating Modal */}
       <RatingModal
         systemName={system.name}
         isOpen={showRatingModal}

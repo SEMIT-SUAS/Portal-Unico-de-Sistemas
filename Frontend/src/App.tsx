@@ -5,8 +5,7 @@ import { Dashboard } from "./components/Dashboard";
 import { FeaturedSystems } from "./components/FeaturedSystems";
 import { SystemCard } from "./components/SystemCard";
 import { SystemModal } from "./components/SystemModal";
-import { useSystems, useDashboard } from "./hooks/useSystems";
-import { systemService } from "./services/api.ts";
+import { useSystems, useDashboard, useSystemOperations, useSystemDownloads, useSystemAccess } from "./hooks/useSystems";
 import { DigitalSystem, categories, departmentCategories } from "./data/systems";
 import React from "react";
 
@@ -16,9 +15,12 @@ export default function App() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedSystem, setSelectedSystem] = useState<DigitalSystem | null>(null);
   
-  // Usar hook personalizado para buscar sistemas
+  // Usar hooks personalizados
   const { systems, loading, error, refetch } = useSystems();
   const { stats, loading: statsLoading, error: statsError } = useDashboard(selectedDepartment);
+  const { addReview, loading: reviewLoading } = useSystemOperations();
+  const { incrementDownload } = useSystemDownloads();
+  const { incrementAccess } = useSystemAccess();
 
   // Filter systems based on search, category, and department
   const filteredSystems = useMemo(() => {
@@ -84,23 +86,48 @@ export default function App() {
 
   const handleSystemUpdate = async (updatedSystem: DigitalSystem) => {
     try {
-      const updatedSystems = systems.map(system => 
-        system.id === updatedSystem.id ? updatedSystem : system
-      );
       console.log('System updated:', updatedSystem);
-      refetch();
+      await refetch();
     } catch (error) {
       console.error('Error updating system:', error);
     }
   };
 
+  // ✅ CORRIGIDO: Usar o hook addReview
   const handleAddReview = async (systemId: number, ratingData: any) => {
     try {
-      await systemService.addReview(systemId, ratingData);
-      refetch();
+      console.log('📝 Enviando avaliação do App.tsx...');
+      const success = await addReview(systemId, ratingData);
+      if (success) {
+        console.log('✅ Avaliação adicionada com sucesso, recarregando dados...');
+        await refetch();
+        return true;
+      } else {
+        throw new Error('Erro ao adicionar avaliação');
+      }
     } catch (error) {
       console.error('Error adding review:', error);
       throw error;
+    }
+  };
+
+  // ✅ Handler para download
+  const handleDownload = async (systemId: number) => {
+    try {
+      await incrementDownload(systemId);
+      await refetch();
+    } catch (error) {
+      console.error('Error incrementing download:', error);
+    }
+  };
+
+  // ✅ Handler para acesso
+  const handleAccess = async (systemId: number) => {
+    try {
+      await incrementAccess(systemId);
+      await refetch();
+    } catch (error) {
+      console.error('Error incrementing access:', error);
     }
   };
 
@@ -271,6 +298,8 @@ export default function App() {
                   key={system.id}
                   system={system}
                   onSystemClick={setSelectedSystem}
+                  onDownload={() => handleDownload(system.id)}
+                  onAccess={() => handleAccess(system.id)}
                 />
               ))}
             </div>
@@ -283,7 +312,10 @@ export default function App() {
         system={selectedSystem}
         onClose={() => setSelectedSystem(null)}
         onSystemUpdate={handleSystemUpdate}
-        onAddReview={handleAddReview}
+        onAddReview={handleAddReview}  
+        onDownload={selectedSystem ? () => handleDownload(selectedSystem.id) : undefined}
+        onAccess={selectedSystem ? () => handleAccess(selectedSystem.id) : undefined}
+        reviewLoading={reviewLoading}
       />
 
       {/* Footer */}

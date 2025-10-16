@@ -1,10 +1,24 @@
+// src/components/ReviewsModal.tsx
 import React from "react";
 import { useState } from "react";
 import { Star, ArrowLeft, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { UserReview } from "../data/systems";
+
+// ✅ CORREÇÃO: Mudar id para string para compatibilidade
+export interface UserReview {
+  id: string; // ✅ Mude de number para string
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  cor?: string;
+  sexo?: string;
+  idade?: number;
+  latitude?: number;
+  longitude?: number;
+}
 
 interface ReviewsModalProps {
   reviews: UserReview[];
@@ -33,6 +47,14 @@ export function ReviewsModal({ reviews, systemName, isOpen, onClose }: ReviewsMo
 
   const goodReviewsCount = reviews.filter(r => r.rating >= 4).length;
   const badReviewsCount = reviews.filter(r => r.rating <= 3).length;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const getInitial = (userName: string) => {
+    return userName?.charAt(0).toUpperCase() || 'U';
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -100,7 +122,7 @@ export function ReviewsModal({ reviews, systemName, isOpen, onClose }: ReviewsMo
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {review.userName.charAt(0)}
+                        {getInitial(review.userName)}
                       </div>
                       <div>
                         <span className="font-medium">{review.userName}</span>
@@ -118,10 +140,19 @@ export function ReviewsModal({ reviews, systemName, isOpen, onClose }: ReviewsMo
                       </div>
                     </div>
                     <span className="text-sm text-gray-500">
-                      {new Date(review.date).toLocaleDateString('pt-BR')}
+                      {formatDate(review.date)}
                     </span>
                   </div>
                   <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                  
+                  {/* Informações demográficas */}
+                  {(review.cor || review.sexo || review.idade) && (
+                    <div className="flex gap-4 mt-3 pt-3 border-t text-xs text-gray-500">
+                      {review.idade && <span>Idade: {review.idade} anos</span>}
+                      {review.sexo && <span>Sexo: {review.sexo}</span>}
+                      {review.cor && <span>Cor: {review.cor}</span>}
+                    </div>
+                  )}
                 </div>
               ))
             )}
