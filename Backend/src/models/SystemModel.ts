@@ -423,16 +423,19 @@ export class SystemModel {
     const query = `
       SELECT 
         CASE 
-          WHEN responsible_secretary LIKE '%SEMUS%' THEN 'saude'
-          WHEN responsible_secretary LIKE '%SEMED%' THEN 'educacao'
-          WHEN responsible_secretary LIKE '%SEMAS%' THEN 'assistencia-social'
-          WHEN responsible_secretary LIKE '%SEMAPA%' THEN 'meio-ambiente'
-          WHEN responsible_secretary LIKE '%SEMFAZ%' THEN 'fazenda-financas'
-          WHEN responsible_secretary LIKE '%SEPLAN%' THEN 'planejamento'
-          WHEN responsible_secretary LIKE '%SEMIT%' THEN 'tecnologia'
-          WHEN responsible_secretary LIKE '%SEMTT%' THEN 'transito-transporte'
-          WHEN responsible_secretary LIKE '%SECULT%' THEN 'cultura'
-          WHEN responsible_secretary LIKE '%SEMURH%' THEN 'urbanismo'
+          WHEN responsible_secretary = 'SEMUS' THEN 'saude'
+          WHEN responsible_secretary = 'SEMED' THEN 'educacao'
+          WHEN responsible_secretary = 'SEMAS' THEN 'assistencia-social'
+          WHEN responsible_secretary = 'SEMAPA' THEN 'meio-ambiente'
+          WHEN responsible_secretary = 'SEMFAZ' THEN 'fazenda-financas'
+          WHEN responsible_secretary = 'SEPLAN' THEN 'planejamento'
+          WHEN responsible_secretary = 'SEMIT' THEN 'tecnologia'
+          WHEN responsible_secretary = 'SEMTT' THEN 'transito-transporte'
+          WHEN responsible_secretary = 'SECULT' THEN 'cultura'
+          WHEN responsible_secretary = 'SEMURH' THEN 'urbanismo'
+          WHEN responsible_secretary = 'SETUR' THEN 'turismo'
+          WHEN responsible_secretary = 'SECOM' THEN 'comunicacao'
+          WHEN responsible_secretary = 'SEMUSC' THEN 'seguranca'
           ELSE 'outros'
         END as department,
         COUNT(*) as count
@@ -443,7 +446,6 @@ export class SystemModel {
     try {
       const result = await pool.query(query);
       
-      // ✅ CORREÇÃO: Adicionar tipos explicitamente
       return result.rows.reduce((acc: Record<string, number>, row: any) => {
         acc[row.department] = parseInt(row.count);
         return acc;
@@ -453,6 +455,7 @@ export class SystemModel {
       throw new Error('Failed to count systems by department');
     }
   }
+
 
   // ✅✅✅ CORREÇÃO CRÍTICA: Adicionar uma nova avaliação - COM ATUALIZAÇÃO DE RATING E CONTAGEM
   static async addReview(systemId: number, reviewData: {

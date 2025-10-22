@@ -112,7 +112,7 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
                 >
                   {selectedDepartment 
                     ? departmentCategories[selectedDepartment as keyof typeof departmentCategories] 
-                    : "Por Secretaria/Órgão"
+                    : "Por Categoria"
                   }
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>

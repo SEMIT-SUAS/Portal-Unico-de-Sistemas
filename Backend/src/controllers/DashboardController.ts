@@ -70,8 +70,9 @@ export class DashboardController {
       const secretaries = this.departmentMap[department] || [];
       if (secretaries.length === 0) return null;
 
-      const conditions = secretaries.map(secretary => 
-        `responsible_secretary LIKE '%${secretary}%'`
+      // ✅ CORREÇÃO: Usar igualdade ao invés de LIKE
+      const conditions = secretaries.map((secretary, index) => 
+        `responsible_secretary = $${index + 1}`
       ).join(' OR ');
 
       const query = `
@@ -85,7 +86,7 @@ export class DashboardController {
         WHERE ${conditions}
       `;
 
-      const result = await client.query(query);
+      const result = await client.query(query, secretaries);
       const row = result.rows[0];
 
       return {

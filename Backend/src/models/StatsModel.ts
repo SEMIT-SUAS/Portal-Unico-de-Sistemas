@@ -7,13 +7,15 @@ export class StatsModel {
     const totalSystemsQuery = `SELECT COUNT(*) as total FROM digital_systems`;
     const totalDownloadsQuery = `SELECT COALESCE(SUM(downloads), 0) as total_downloads FROM digital_systems`;
     const totalUsersQuery = `SELECT COALESCE(SUM(usage_count), 0) as total_users FROM digital_systems`;
+    const totalReviewsQuery = `SELECT COALESCE(SUM(reviews_count), 0) as total_reviews FROM digital_systems`;
     const avgRatingQuery = `SELECT AVG(rating) as avg_rating FROM digital_systems WHERE rating IS NOT NULL`;
 
     try {
-      const [systemsResult, downloadsResult, usersResult, ratingResult] = await Promise.all([
+      const [systemsResult, downloadsResult, usersResult, reviewsResult, ratingResult] = await Promise.all([
         pool.query(totalSystemsQuery),
         pool.query(totalDownloadsQuery),
         pool.query(totalUsersQuery),
+        pool.query(totalReviewsQuery),
         pool.query(avgRatingQuery)
       ]);
 
@@ -21,6 +23,7 @@ export class StatsModel {
         totalSystems: parseInt(systemsResult.rows[0].total),
         totalDownloads: parseInt(downloadsResult.rows[0].total_downloads),
         totalUsers: parseInt(usersResult.rows[0].total_users),
+        totalReviews: parseInt(reviewsResult.rows[0].total_reviews),
         averageRating: parseFloat(ratingResult.rows[0].avg_rating) || 0
       };
     } catch (error) {
@@ -34,21 +37,22 @@ export class StatsModel {
     const query = `
       SELECT 
         CASE 
-          WHEN responsible_secretary LIKE '%SEMUS%' THEN 'saude'
-          WHEN responsible_secretary LIKE '%SEMED%' THEN 'educacao'
-          WHEN responsible_secretary LIKE '%SEMAS%' THEN 'assistencia-social'
-          WHEN responsible_secretary LIKE '%SEMAPA%' THEN 'meio-ambiente'
-          WHEN responsible_secretary LIKE '%SEMFAZ%' THEN 'fazenda-financas'
-          WHEN responsible_secretary LIKE '%SEPLAN%' THEN 'planejamento'
-          WHEN responsible_secretary LIKE '%SEMIT%' THEN 'tecnologia'
-          WHEN responsible_secretary LIKE '%SEMTT%' THEN 'transito-transporte'
-          WHEN responsible_secretary LIKE '%SECULT%' THEN 'cultura'
-          WHEN responsible_secretary LIKE '%SEMURH%' THEN 'urbanismo'
+          WHEN responsible_secretary = 'SEMUS' THEN 'saude'
+          WHEN responsible_secretary = 'SEMED' THEN 'educacao'
+          WHEN responsible_secretary = 'SEMAS' THEN 'assistencia-social'
+          WHEN responsible_secretary = 'SEMAPA' THEN 'meio-ambiente'
+          WHEN responsible_secretary = 'SEMFAZ' THEN 'fazenda-financas'
+          WHEN responsible_secretary = 'SEPLAN' THEN 'planejamento'
+          WHEN responsible_secretary = 'SEMIT' THEN 'tecnologia'
+          WHEN responsible_secretary = 'SEMTT' THEN 'transito-transporte'
+          WHEN responsible_secretary = 'SECULT' THEN 'cultura'
+          WHEN responsible_secretary = 'SEMURH' THEN 'urbanismo'
           ELSE 'outros'
         END as department,
         COUNT(*) as system_count,
         COALESCE(SUM(downloads), 0) as total_downloads,
         COALESCE(SUM(usage_count), 0) as total_users,
+        COALESCE(SUM(reviews_count), 0) as total_reviews,
         AVG(rating) as avg_rating
       FROM digital_systems
       GROUP BY department
@@ -62,6 +66,7 @@ export class StatsModel {
         systemCount: parseInt(row.system_count),
         totalDownloads: parseInt(row.total_downloads),
         totalUsers: parseInt(row.total_users),
+        totalReviews: parseInt(row.total_reviews),
         averageRating: parseFloat(row.avg_rating) || 0
       }));
     } catch (error) {

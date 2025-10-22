@@ -4,7 +4,7 @@ import axios from 'axios';
 // PARA FRONTEND: Use import.meta.env (Vite) em vez de process.env
 //const API_BASE_URL =  'http://10.0.0.116:3001/api';
 const API_BASE_URL =  'https://sistemas.saoluis.ma.gov.br/api/api';
-//const API_BASE_URL =  '/api';
+// const API_BASE_URL =  '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
