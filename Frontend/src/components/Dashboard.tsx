@@ -40,49 +40,41 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
       })
     : systems;
 
-  // DEBUG: Log para verificar os dados
-  console.log('Systems data:', systems);
-  console.log('Filtered systems:', filteredSystems);
-  console.log('Selected department:', selectedDepartment);
-
   // Calcular estatísticas específicas da secretaria
   const calculateDepartmentStats = () => {
     const totalSystems = filteredSystems.length;
     const totalDownloads = filteredSystems.reduce((sum, system) => sum + (system.downloads || 0), 0);
     const totalUsers = filteredSystems.reduce((sum, system) => sum + (system.usageCount || 0), 0);
+    
+    // SOMA de todas as avaliações
     const totalReviews = filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0);
 
-    // Cálculo robusto da média de avaliações
+    // Cálculo SIMPLES: soma de todas as notas / total de avaliações
     let averageRating = 0;
     
     if (totalReviews > 0) {
-      const totalWeightedRating = filteredSystems.reduce((sum, system) => {
-        const rating = system.rating || 0;
-        const reviews = system.reviewsCount || 0;
-        console.log(`System: ${system.name}, Rating: ${rating}, Reviews: ${reviews}, Contribution: ${rating * reviews}`);
-        return sum + (rating * reviews);
+      // Soma de TODAS as notas (cada sistema contribui com rating * reviewsCount)
+      const sumAllRatings = filteredSystems.reduce((sum, system) => {
+        return sum + ((system.rating || 0) * (system.reviewsCount || 0));
       }, 0);
       
-      console.log(`Total weighted rating: ${totalWeightedRating}, Total reviews: ${totalReviews}`);
-      averageRating = totalWeightedRating / totalReviews;
-    } else if (totalSystems > 0) {
-      // Fallback: média simples se não houver avaliações
-      averageRating = filteredSystems.reduce((sum, system) => sum + (system.rating || 0), 0) / totalSystems;
-    }
+      // Divide pelo TOTAL de avaliações
+      averageRating = sumAllRatings / totalReviews;
 
-    console.log('Calculated stats:', {
-      totalSystems,
-      totalDownloads,
-      totalUsers,
-      averageRating,
-      totalReviews
-    });
+      console.log('🔍 DEBUG - Cálculo Simples de Rating:', {
+        totalSystems,
+        totalReviews,
+        sumAllRatings,
+        averageRating,
+        calculation: `${sumAllRatings} / ${totalReviews} = ${averageRating}`
+      });
+    }
 
     return {
       totalSystems,
       totalDownloads,
       totalUsers,
-      averageRating,
+      averageRating: isNaN(averageRating) ? 0 : averageRating,
       totalReviews
     };
   };
@@ -109,7 +101,9 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
       value: departmentStats.averageRating > 0 ? departmentStats.averageRating.toFixed(1) : '0.0',
       icon: Star,
       color: 'yellow',
-      comparison: selectedDepartment ? `${departmentStats.totalReviews} avaliações` : undefined
+      comparison: selectedDepartment ? 
+        `${departmentStats.totalReviews} avaliações` : 
+        `${departmentStats.totalReviews} avaliações no total`
     },
     {
       key: 'totalReviews',
