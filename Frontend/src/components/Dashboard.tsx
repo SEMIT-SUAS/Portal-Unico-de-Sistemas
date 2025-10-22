@@ -40,63 +40,24 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
       })
     : systems;
 
-  // DEBUG: Verificar os dados dos sistemas
-  console.log('🔍 DASHBOARD DEBUG - Sistemas filtrados:', filteredSystems.map(s => ({
-    name: s.name,
-    rating: s.rating,
-    reviewsCount: s.reviewsCount,
-    weighted: (s.rating || 0) * (s.reviewsCount || 0)
-  })));
-
-  // Calcular estatísticas específicas da secretaria - VERSÃO SIMPLIFICADA
-  const calculateDepartmentStats = () => {
-    const totalSystems = filteredSystems.length;
-    const totalDownloads = filteredSystems.reduce((sum, system) => sum + (system.downloads || 0), 0);
-    const totalUsers = filteredSystems.reduce((sum, system) => sum + (system.usageCount || 0), 0);
-    
-    // SOMA de todas as avaliações
-    const totalReviews = filteredSystems.reduce((sum, system) => {
-      const reviews = system.reviewsCount || 0;
-      console.log(`📊 ${system.name}: ${reviews} avaliações`);
-      return sum + reviews;
-    }, 0);
-
-    // Cálculo DIRETO da média
-    let averageRating = 0;
-    
-    if (totalReviews > 0) {
-      // Soma de TODAS as notas (rating * número de reviews para cada sistema)
-      const sumAllRatings = filteredSystems.reduce((sum, system) => {
-        const systemRating = system.rating || 0;
-        const systemReviews = system.reviewsCount || 0;
-        const systemContribution = systemRating * systemReviews;
-        
-        console.log(`⭐ ${system.name}: ${systemRating} * ${systemReviews} = ${systemContribution}`);
-        
-        return sum + systemContribution;
+  // Calcular estatísticas específicas da secretaria
+  const departmentStats = {
+    totalSystems: filteredSystems.length,
+    totalDownloads: filteredSystems.reduce((sum, system) => sum + (system.downloads || 0), 0),
+    totalUsers: filteredSystems.reduce((sum, system) => sum + (system.usageCount || 0), 0),
+    // CORREÇÃO: Calcular a média ponderada baseada no total de avaliações
+    averageRating: (() => {
+      const totalRatingSum = filteredSystems.reduce((sum, system) => {
+        // Multiplica a nota média do sistema pelo número de avaliações
+        return sum + ((system.rating || 0) * (system.reviewsCount || 0));
       }, 0);
       
-      averageRating = sumAllRatings / totalReviews;
-
-      console.log('🎯 CÁLCULO FINAL:', {
-        sumAllRatings,
-        totalReviews,
-        averageRating: averageRating.toFixed(2)
-      });
-    } else {
-      console.log('⚠️ Nenhuma avaliação encontrada para cálculo');
-    }
-
-    return {
-      totalSystems,
-      totalDownloads,
-      totalUsers,
-      averageRating,
-      totalReviews
-    };
+      const totalReviews = filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0);
+      
+      return totalReviews > 0 ? totalRatingSum / totalReviews : 0;
+    })(),
+    totalReviews: filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0)
   };
-
-  const departmentStats = calculateDepartmentStats();
 
   const departmentName = selectedDepartment 
     ? departmentCategories[selectedDepartment as keyof typeof departmentCategories] 
@@ -112,15 +73,31 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
       color: 'blue',
       comparison: selectedDepartment ? `de ${stats.totalSystems} total` : undefined
     },
+    // {
+    //   key: 'totalUsers',
+    //   label: 'Total de Acessos',
+    //   value: departmentStats.totalUsers.toLocaleString(),
+    //   icon: Users,
+    //   color: 'green',
+    //   comparison: selectedDepartment && stats.totalUsers > 0 ? 
+    //     `${((departmentStats.totalUsers / stats.totalUsers) * 100).toFixed(1)}% do total` : undefined
+    // },
+    // {
+    //   key: 'totalDownloads',
+    //   label: 'Total de Downloads',
+    //   value: departmentStats.totalDownloads.toLocaleString(),
+    //   icon: Download,
+    //   color: 'purple',
+    //   comparison: selectedDepartment && stats.totalDownloads > 0 ? 
+    //     `${((departmentStats.totalDownloads / stats.totalDownloads) * 100).toFixed(1)}% do total` : undefined
+    // },
     {
       key: 'averageRating',
       label: 'Avaliação Média',
-      value: departmentStats.averageRating > 0 ? departmentStats.averageRating.toFixed(1) : '0.0',
+      value: departmentStats.averageRating.toFixed(1),
       icon: Star,
       color: 'yellow',
-      comparison: selectedDepartment ? 
-        `baseada em ${departmentStats.totalReviews} avaliações` : 
-        `baseada em ${departmentStats.totalReviews} avaliações`
+      comparison: selectedDepartment ? `${departmentStats.totalReviews} avaliações` : undefined
     },
     {
       key: 'totalReviews',
@@ -168,9 +145,9 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
         </div>
       </div>
 
-      {/* Container único com as métricas lado a lado */}
+      {/* Container único com as 5 métricas lado a lado */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> {/*SE FALCAO PEDIR TOTAL DE ACESSOS E DOWNLOADS, TROCAR OS COLS-3 POR COLS-5 */}
           {metrics.map((metric) => {
             const IconComponent = metric.icon;
             const colors = colorClasses[metric.color as keyof typeof colorClasses];
@@ -195,6 +172,8 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
           })}
         </div>
       </div>
+
+    
     </div>
   );
 }
