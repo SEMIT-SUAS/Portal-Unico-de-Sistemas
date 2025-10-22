@@ -45,9 +45,17 @@ export function Dashboard({ systems, stats, selectedDepartment, departmentCatego
     totalSystems: filteredSystems.length,
     totalDownloads: filteredSystems.reduce((sum, system) => sum + (system.downloads || 0), 0),
     totalUsers: filteredSystems.reduce((sum, system) => sum + (system.usageCount || 0), 0),
-    averageRating: filteredSystems.length > 0 
-      ? filteredSystems.reduce((sum, system) => sum + (system.rating || 0), 0) / filteredSystems.length 
-      : 0,
+    // CORREÇÃO: Calcular a média ponderada baseada no total de avaliações
+    averageRating: (() => {
+      const totalRatingSum = filteredSystems.reduce((sum, system) => {
+        // Multiplica a nota média do sistema pelo número de avaliações
+        return sum + ((system.rating || 0) * (system.reviewsCount || 0));
+      }, 0);
+      
+      const totalReviews = filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0);
+      
+      return totalReviews > 0 ? totalRatingSum / totalReviews : 0;
+    })(),
     totalReviews: filteredSystems.reduce((sum, system) => sum + (system.reviewsCount || 0), 0)
   };
 

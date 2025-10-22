@@ -114,7 +114,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
           {newSystems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                {/* <Badge className="bg-yellow-500 text-black">NOVO</Badge> */}
+                <Star className="h-5 w-5 text-yellow-500 fill-current" />
                 <h2 className="text-lg font-bold text-gray-900">Novidades</h2>
               </div>
               
