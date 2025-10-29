@@ -47,6 +47,21 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
   const [location, setLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [step, setStep] = useState<'rating' | 'demographics'>('rating');
+  const [idadeError, setIdadeError] = useState("");
+
+  const validateIdade = (idade: number): boolean => {
+    return idade >= 18 && idade <= 99;
+  };
+
+  const handleIdadeChange = (value: string) => {
+    const idadeValue = parseInt(value) || 0;
+    setDemographics({...demographics, idade: idadeValue});
+    
+    // Limpa o erro quando o usuário começar a digitar
+    if (idadeError) {
+      setIdadeError("");
+    }
+  };
 
   const getLocation = async () => {
     if (!navigator.geolocation) {
@@ -97,6 +112,12 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
       return;
     }
 
+    // Validação da idade
+    if (!validateIdade(demographics.idade)) {
+      setIdadeError("Por favor, informe uma idade válida!");
+      return;
+    }
+
     const ratingData: RatingData = {
       userName: userName.trim(), // Alterado para userName
       rating,
@@ -115,6 +136,7 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
     setDemographics({ cor: "", sexo: "", idade: 0 });
     setLocation(null);
     setStep('rating');
+    setIdadeError("");
   };
 
   const renderStars = () => {
@@ -249,9 +271,13 @@ export function RatingModal({ systemName, isOpen, onClose, onSubmit }: RatingMod
                   min="1"
                   max="120"
                   value={demographics.idade || ""}
-                  onChange={(e) => setDemographics({...demographics, idade: parseInt(e.target.value) || 0})}
+                  onChange={(e) => handleIdadeChange(e.target.value)}
                   placeholder="Digite sua idade"
+                  className={idadeError ? "border-red-500" : ""}
                 />
+                {idadeError && (
+                  <p className="text-red-600 text-sm mt-1 font-medium">{idadeError}</p>
+                )}
               </div>
 
               <div className="border rounded-lg p-3">

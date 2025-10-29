@@ -1,5 +1,5 @@
 import React from "react";
-import { Star } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -15,12 +15,11 @@ interface FeaturedSystemsProps {
 export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps) {
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
   const [currentNewIndex, setCurrentNewIndex] = useState(0);
-  const [imageKey, setImageKey] = useState(0); // ✅ Key para forçar recarregamento
+  const [imageKey, setImageKey] = useState(0);
   
   const featuredSystems = systems.filter(system => system.isHighlight);
   const newSystems = systems.filter(system => system.isNew);
 
-  // ✅ Efeito para forçar recarregamento das imagens quando mudar o sistema
   useEffect(() => {
     setImageKey(prev => prev + 1);
   }, [currentFeaturedIndex, currentNewIndex]);
@@ -45,12 +44,38 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
     return () => clearInterval(timer);
   }, [newSystems.length]);
 
+  // Funções de navegação para Destaques
+  const nextFeatured = () => {
+    setCurrentFeaturedIndex((prevIndex) => 
+      prevIndex === featuredSystems.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const prevFeatured = () => {
+    setCurrentFeaturedIndex((prevIndex) => 
+      prevIndex === 0 ? featuredSystems.length - 1 : prevIndex - 1
+    );
+  };
+
+  // Funções de navegação para Novidades
+  const nextNew = () => {
+    setCurrentNewIndex((prevIndex) => 
+      prevIndex === newSystems.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+
+  const prevNew = () => {
+    setCurrentNewIndex((prevIndex) => 
+      prevIndex === 0 ? newSystems.length - 1 : prevIndex - 1
+    );
+  };
+
   if (featuredSystems.length === 0 && newSystems.length === 0) return null;
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-yellow-50 py-4">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-4">
           {/* Destaques */}
           {featuredSystems.length > 0 && (
             <div>
@@ -60,23 +85,32 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
               </div>
               
               <Card className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-800 text-white h-48">
-                <CardContent className="p-0 h-full">
-                  <div className="flex h-full">
-                    <div className="w-1/3 relative">
+                <CardContent className="p-6 h-full"> {/* ✅ Alterado de p-5 para p-6 (igual Novidades) */}
+                  <div className="flex h-full items-center justify-center pl-8 pr-8 py-4"> {/* ✅ Alterado pr-4 para pr-8 (igual Novidades) */}
+                    {/* Setas de navegação para Destaques */}
+                    {featuredSystems.length > 0 && (
+                      <button
+                        onClick={prevFeatured}
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                      >
+                        <ChevronLeft className="h-6 w-6 text-white" />
+                      </button>
+                    )}
+                    
+                    <div className="w-1/3 relative ml-4">
                       <ImageWithFallback
-                        key={`featured-${currentFeaturedIndex}-${imageKey}`} // ✅ Key única para forçar recarregamento
+                        key={`featured-${currentFeaturedIndex}-${imageKey}`}
                         src={featuredSystems[currentFeaturedIndex]?.iconUrl || ""}
                         alt={featuredSystems[currentFeaturedIndex]?.name || ""}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           console.log('❌ Erro ao carregar imagem em destaque:', featuredSystems[currentFeaturedIndex]?.iconUrl);
-                          // Fallback será aplicado pelo ImageWithFallback
                         }}
                       />
-                      <div className="absolute inset-0 bg-black/20"></div>
+                      <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
                     </div>
                     
-                    <div className="flex-1 p-3 flex flex-col justify-center">
+                    <div className="flex-1 p-4 flex flex-col justify-center">
                       <h3 className="text-base font-bold mb-2 line-clamp-2">
                         {featuredSystems[currentFeaturedIndex]?.name}
                       </h3>
@@ -91,19 +125,15 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                         Ver Detalhes
                       </Button>
                     </div>
-                  </div>
-                  
-                  {/* Dots for Featured */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                    {featuredSystems.map((_, index) => (
+
+                    {featuredSystems.length > 0 && (
                       <button
-                        key={index}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${
-                          index === currentFeaturedIndex ? 'bg-white' : 'bg-white/50'
-                        }`}
-                        onClick={() => setCurrentFeaturedIndex(index)}
-                      />
-                    ))}
+                        onClick={nextFeatured}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                      >
+                        <ChevronRight className="h-6 w-6 text-white" />
+                      </button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -119,28 +149,32 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
               </div>
               
               <Card className="relative overflow-hidden bg-gradient-to-r from-green-600 to-green-800 text-white h-48">
-                <CardContent className="p-0 h-full">
-                  <div className="flex h-full">
-                    <div className="w-1/3 relative">
+                <CardContent className="p-6 h-full">
+                  <div className="flex h-full items-center justify-center pl-8 pr-8 py-4">
+                    {/* Setas de navegação para Novidades */}
+                    {newSystems.length > 0 && (
+                      <button
+                        onClick={prevNew}
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                      >
+                        <ChevronLeft className="h-6 w-6 text-white" />
+                      </button>
+                    )}
+                    
+                    <div className="w-1/3 relative ml-4">
                       <ImageWithFallback
-                        key={`new-${currentNewIndex}-${imageKey}`} // ✅ Key única para forçar recarregamento
+                        key={`new-${currentNewIndex}-${imageKey}`}
                         src={newSystems[currentNewIndex]?.iconUrl || ""}
                         alt={newSystems[currentNewIndex]?.name || ""}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           console.log('❌ Erro ao carregar imagem em novidades:', newSystems[currentNewIndex]?.iconUrl);
-                          // Fallback será aplicado pelo ImageWithFallback
                         }}
                       />
-                      <div className="absolute inset-0 bg-black/20"></div>
+                      <div className="absolute inset-0 bg-black/20 rounded-lg"></div>
                     </div>
                     
-                    <div className="flex-1 p-3 flex flex-col justify-center">
-                      {/* <div className="flex items-center gap-2 mb-2">
-                        <Badge className="bg-yellow-500 text-black text-xs">
-                          NOVO {newSystems[currentNewIndex]?.launchYear}
-                        </Badge>
-                      </div> */}
+                    <div className="flex-1 p-4 flex flex-col justify-center">
                       <h3 className="text-base font-bold mb-2 line-clamp-2">
                         {newSystems[currentNewIndex]?.name}
                       </h3>
@@ -155,19 +189,15 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                         Ver Detalhes
                       </Button>
                     </div>
-                  </div>
-                  
-                  {/* Dots for New */}
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                    {newSystems.map((_, index) => (
+
+                    {newSystems.length > 0 && (
                       <button
-                        key={index}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${
-                          index === currentNewIndex ? 'bg-white' : 'bg-white/50'
-                        }`}
-                        onClick={() => setCurrentNewIndex(index)}
-                      />
-                    ))}
+                        onClick={nextNew}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                      >
+                        <ChevronRight className="h-6 w-6 text-white" />
+                      </button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
