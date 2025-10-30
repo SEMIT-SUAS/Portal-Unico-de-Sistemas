@@ -73,36 +73,36 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
   if (featuredSystems.length === 0 && newSystems.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-yellow-50 py-4">
+    <div className="bg-gradient-to-r from-blue-50 to-yellow-50 py-4 featured-systems-custom">
       <div className="container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-4">
           {/* Destaques */}
           {featuredSystems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                <Star className="h-5 w-5 text-yellow-500 fill-current rounded-md" />
                 <h2 className="text-lg font-bold text-gray-900">Destaques</h2>
               </div>
               
               <Card className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-800 text-white h-48">
-                <CardContent className="p-6 h-full"> {/* ✅ Alterado de p-5 para p-6 (igual Novidades) */}
-                  <div className="flex h-full items-center justify-center pl-8 pr-8 py-4"> {/* ✅ Alterado pr-4 para pr-8 (igual Novidades) */}
+                <CardContent className="p-6 h-full">
+                  <div className="flex h-full items-center justify-center pl-8 pr-8 py-4">
                     {/* Setas de navegação para Destaques */}
                     {featuredSystems.length > 0 && (
                       <button
                         onClick={prevFeatured}
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
                       >
-                        <ChevronLeft className="h-6 w-6 text-white" />
+                        <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
                       </button>
                     )}
                     
-                    <div className="w-1/3 relative ml-4">
+                    <div className="image-container relative ml-4">
                       <ImageWithFallback
                         key={`featured-${currentFeaturedIndex}-${imageKey}`}
                         src={featuredSystems[currentFeaturedIndex]?.iconUrl || ""}
                         alt={featuredSystems[currentFeaturedIndex]?.name || ""}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="system-image w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           console.log('❌ Erro ao carregar imagem em destaque:', featuredSystems[currentFeaturedIndex]?.iconUrl);
                         }}
@@ -120,7 +120,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                       <Button 
                         size="sm"
                         onClick={() => onSystemClick(featuredSystems[currentFeaturedIndex])}
-                        className="bg-white text-blue-800 hover:bg-blue-50 w-fit text-xs h-7"
+                        className="bg-white text-blue-800 hover:bg-blue-50 w-fit text-xs h-7 rounded-md"
                       >
                         Ver Detalhes
                       </Button>
@@ -129,9 +129,9 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                     {featuredSystems.length > 0 && (
                       <button
                         onClick={nextFeatured}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
                       >
-                        <ChevronRight className="h-6 w-6 text-white" />
+                        <ChevronRight className="h-4 w-4 text-white rounded-sm" />
                       </button>
                     )}
                   </div>
@@ -144,7 +144,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
           {newSystems.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                <Star className="h-5 w-5 text-yellow-500 fill-current rounded-md" />
                 <h2 className="text-lg font-bold text-gray-900">Novidades</h2>
               </div>
               
@@ -155,18 +155,18 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                     {newSystems.length > 0 && (
                       <button
                         onClick={prevNew}
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
                       >
-                        <ChevronLeft className="h-6 w-6 text-white" />
+                        <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
                       </button>
                     )}
                     
-                    <div className="w-1/3 relative ml-4">
+                    <div className="image-container relative ml-4">
                       <ImageWithFallback
                         key={`new-${currentNewIndex}-${imageKey}`}
                         src={newSystems[currentNewIndex]?.iconUrl || ""}
                         alt={newSystems[currentNewIndex]?.name || ""}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="system-image w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           console.log('❌ Erro ao carregar imagem em novidades:', newSystems[currentNewIndex]?.iconUrl);
                         }}
@@ -184,7 +184,7 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                       <Button 
                         size="sm"
                         onClick={() => onSystemClick(newSystems[currentNewIndex])}
-                        className="bg-white text-green-800 hover:bg-green-50 w-fit text-xs h-7"
+                        className="bg-white text-green-800 hover:bg-green-50 w-fit text-xs h-7 rounded-md"
                       >
                         Ver Detalhes
                       </Button>
@@ -193,9 +193,9 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                     {newSystems.length > 0 && (
                       <button
                         onClick={nextNew}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
                       >
-                        <ChevronRight className="h-6 w-6 text-white" />
+                        <ChevronRight className="h-4 w-4 text-white rounded-sm" />
                       </button>
                     )}
                   </div>
@@ -205,6 +205,44 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .featured-systems-custom {
+          --image-width: 33.333%; /* Equivale a w-1/3 - AJUSTE AQUI */
+          --image-max-size: 120px; /* Tamanho máximo - AJUSTE AQUI */
+          --image-border-radius: 8px; /* Border radius - AJUSTE AQUI */
+          --card-padding-x: 2rem; /* px-8 - AJUSTE AQUI */
+        }
+
+        .image-container {
+          width: var(--image-width);
+          max-width: var(--image-max-size);
+        }
+
+        .system-image {
+          border-radius: var(--image-border-radius);
+        }
+
+        /* Para telas grandes (monitor) */
+        @media (min-width: 1440px) {
+          .featured-systems-custom {
+            --image-width: 25%; /* Reduz para 1/4 em telas grandes */
+            --image-max-size: 140px; /* Aumenta um pouco o máximo */
+            --image-border-radius: 12px; /* Bordas mais arredondadas */
+            --card-padding-x: 3rem; /* Mais padding nas laterais */
+          }
+        }
+
+        /* Para telas muito grandes (4K) */
+        @media (min-width: 1920px) {
+          .featured-systems-custom {
+            --image-width: 20%; /* Reduz ainda mais para telas muito grandes */
+            --image-max-size: 160px;
+            --image-border-radius: 16px;
+            --card-padding-x: 4rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }

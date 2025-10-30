@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -13,8 +13,42 @@ interface CategoryNavProps {
   onDepartmentChange: (department: string | null) => void;
 }
 
-export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, selectedDepartment, onDepartmentChange }: CategoryNavProps) {
+export function CategoryNav({ 
+  selectedCategory, 
+  onCategoryChange, 
+  systemCounts, 
+  selectedDepartment, 
+  onDepartmentChange
+}: CategoryNavProps) {
   const categoriesWithoutDepartment = Object.entries(categories).filter(([key]) => key !== 'por-secretaria');
+  const [filteredSystemCounts, setFilteredSystemCounts] = useState<Record<string, number>>({});
+
+  // Buscar contagens filtradas quando o departamento mudar
+  useEffect(() => {
+    const fetchFilteredCounts = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (selectedDepartment) {
+          params.append('department', selectedDepartment);
+        }
+
+        const response = await fetch(`/api/categories/filtered-counts?${params}`);
+        const result = await response.json();
+
+        if (result.success) {
+          setFilteredSystemCounts(result.data.counts);
+        } else {
+          setFilteredSystemCounts({});
+        }
+      } catch (error) {
+        console.error('Error fetching filtered counts:', error);
+        // Se der erro, usa as contagens normais
+        setFilteredSystemCounts({});
+      }
+    };
+
+    fetchFilteredCounts();
+  }, [selectedDepartment]);
 
   // Função para lidar com a seleção de categoria
   const handleCategorySelect = (category: string | null) => {
@@ -32,6 +66,36 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
     onDepartmentChange(null);
   };
 
+  // Função para remover filtro de categoria
+  const removeCategoryFilter = () => {
+    onCategoryChange(null);
+  };
+
+  // Função para remover filtro de departamento
+  const removeDepartmentFilter = () => {
+    onDepartmentChange(null);
+  };
+
+  // Obtém a contagem para uma categoria específica (usa filteredSystemCounts quando disponível)
+  const getCategoryCount = (key: string) => {
+    // Se há um departamento selecionado E temos contagens filtradas, usa filteredSystemCounts
+    // Caso contrário, usa systemCounts normal
+    if (selectedDepartment && filteredSystemCounts && filteredSystemCounts[key] !== undefined) {
+      return filteredSystemCounts[key];
+    }
+    return systemCounts[key] || 0;
+  };
+
+  // Calcula o total de sistemas baseado nos filtros atuais
+  const getTotalCount = () => {
+    // Se há um departamento selecionado E temos contagens filtradas, soma os valores filtrados
+    if (selectedDepartment && filteredSystemCounts && Object.keys(filteredSystemCounts).length > 0) {
+      return Object.values(filteredSystemCounts).reduce((sum, count) => sum + count, 0);
+    }
+    // Caso contrário, usa o total de systemCounts
+    return Object.values(systemCounts).reduce((sum, count) => sum + count, 0);
+  };
+
   return (
     <div className="bg-white border-b sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4">
@@ -41,22 +105,32 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Filtros ativos:</span>
               {selectedCategory && (
-                <Badge variant="default" className="bg-blue-600 flex items-center gap-1">
-                  {categories[selectedCategory as keyof typeof categories]}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleCategorySelect(null)}
-                  />
-                </Badge>
+                <div className="relative inline-flex items-center">
+                  <Badge variant="default" className="bg-blue-600 flex items-center gap-1 pr-8">
+                    {categories[selectedCategory as keyof typeof categories]}
+                  </Badge>
+                  <button
+                    onClick={removeCategoryFilter}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                    style={{ width: '18px', height: '18px' }}
+                  >
+                    <X className="h-3 w-3 text-gray-700" />
+                  </button>
+                </div>
               )}
               {selectedDepartment && (
-                <Badge variant="default" className="bg-green-600 flex items-center gap-1">
-                  {departmentCategories[selectedDepartment as keyof typeof departmentCategories]}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleDepartmentSelect(null)}
-                  />
-                </Badge>
+                <div className="relative inline-flex items-center">
+                  <Badge variant="default" className="bg-green-600 flex items-center gap-1 pr-8">
+                    {departmentCategories[selectedDepartment as keyof typeof departmentCategories]}
+                  </Badge>
+                  <button
+                    onClick={removeDepartmentFilter}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-200 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                    style={{ width: '18px', height: '18px' }}
+                  >
+                    <X className="h-3 w-3 text-gray-700" />
+                  </button>
+                </div>
               )}
               <Button 
                 variant="ghost" 
@@ -80,7 +154,7 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
               }`}
               onClick={clearAllFilters}
             >
-              Todos
+              Todos ({getTotalCount()})
             </Badge>
             
             {categoriesWithoutDepartment.map(([key, label]) => (
@@ -94,11 +168,11 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
                 }`}
                 onClick={() => handleCategorySelect(key)}
               >
-                {label} ({systemCounts[key] || 0})
+                {label} ({getCategoryCount(key)})
               </Badge>
             ))}
 
-            {/* Department Dropdown */}
+            {/* Department Dropdown - SEM contagem aqui */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -111,8 +185,8 @@ export function CategoryNav({ selectedCategory, onCategoryChange, systemCounts, 
                   }`}
                 >
                   {selectedDepartment 
-                    ? departmentCategories[selectedDepartment as keyof typeof departmentCategories] 
-                    : "Por Categoria"
+                    ? departmentCategories[selectedDepartment as keyof typeof departmentCategories]
+                    : "Por Secretaria"
                   }
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
