@@ -27,10 +27,11 @@ export class SystemModel {
             'date', ur.date::text
           )
         ) as reviews,
-        -- ✅ CONTAGEM PARA SISTEMAS NOVOS: Apenas para is_new = true
+        -- ✅ CORREÇÃO DEFINITIVA: Usar DATE_PART com cast explícito
         CASE 
-          WHEN ds.is_new THEN DATE_PART('day', CURRENT_DATE - ds.created_at) 
-          ELSE 61  -- Sistemas antigos sempre têm 61+ dias
+          WHEN ds.is_new THEN 
+            DATE_PART('day', CURRENT_DATE - ds.created_at)::integer
+          ELSE 61
         END as days_since_creation,
         -- ✅ VERIFICAÇÃO DE NOVIDADE: Apenas is_new = true e menos de 60 dias
         (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
@@ -62,18 +63,16 @@ export class SystemModel {
       params.push(`%${filters.search}%`);
     }
     
-    // ✅ FILTRO NOVOS: Apenas is_new = true E menos de 60 dias
+    // ✅ FILTRO NOVOS: Apenas is_new = true (SEM restrição de tempo)
     if (filters.recentlyAdded !== undefined) {
-      whereClauses.push(`ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days'`);
+      whereClauses.push(`ds.is_new = true`);
     }
     
-    // ✅ FILTRO isNew: Considera is_new = true E menos de 60 dias
+    // ✅ FILTRO isNew: Considera apenas is_new = true (SEM restrição de tempo)
     if (filters.isNew !== undefined) {
-      if (filters.isNew) {
-        whereClauses.push(`ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days'`);
-      } else {
-        whereClauses.push(`(NOT ds.is_new OR ds.created_at < CURRENT_DATE - INTERVAL '60 days')`);
-      }
+      paramCount++;
+      whereClauses.push(`ds.is_new = $${paramCount}`);
+      params.push(filters.isNew);
     }
     
     if (filters.isHighlight !== undefined) {
@@ -92,91 +91,128 @@ export class SystemModel {
     `;
     
     try {
+      console.log('🔍 [SYSTEMMODEL] Executando findAll com filtros:', filters);
       const result = await pool.query(query, params);
+      console.log(`✅ [SYSTEMMODEL] findAll retornou ${result.rows.length} sistemas`);
       return result.rows.map((row: any) => this.mapToApiFormat(row));
     } catch (error) {
-      console.error('Error fetching systems:', error);
+      console.error('❌ [SYSTEMMODEL] Erro no findAll:', error);
       throw new Error('Failed to fetch systems');
     }
   }
 
   // Buscar sistema por ID
   static async findById(id: number): Promise<ApiDigitalSystem | null> {
-  const client = await pool.connect();
-  
-  try {
-    console.log('🔍 [MODEL] Buscando sistema por ID:', id);
+    const client = await pool.connect();
     
-    const query = `
-      SELECT 
-        ds.*,
-        ds.developer,
-        s.name as secretary_name,
-        json_agg(DISTINCT sf.feature) as features,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'id', ur.id::text,
-            'userName', ur.user_name,
-            'rating', ur.rating,
-            'comment', ur.comment,
-            'date', ur.date::text
-          )
-        ) as reviews,
-        -- ✅ CONTAGEM PARA SISTEMAS NOVOS: Apenas para is_new = true
-        CASE 
-          WHEN ds.is_new THEN EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE))
-          ELSE 61  -- Sistemas antigos sempre têm 61+ dias
-        END as days_since_creation,
-        -- ✅ VERIFICAÇÃO DE NOVIDADE: Apenas is_new = true e menos de 60 dias
-        (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
-      FROM digital_systems ds
-      LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
-      LEFT JOIN system_features sf ON ds.id = sf.system_id
-      LEFT JOIN user_reviews ur ON ds.id = ur.system_id
-      WHERE ds.id = $1
-      GROUP BY ds.id, s.name
-    `;
-    
-    console.log('📝 [MODEL] Executando query para sistema ID:', id);
-    
-    const result = await client.query(query, [id]);
-    
-    console.log('📊 [MODEL] Resultado da query:', {
-      rowsCount: result.rows.length,
-      systemId: id
-    });
-    
-    if (result.rows.length === 0) {
-      console.log('⚠️ [MODEL] Sistema não encontrado:', id);
-      return null;
+    try {
+      console.log('🔍 [MODEL] Buscando sistema por ID:', id);
+      
+      const query = `
+        SELECT 
+          ds.*,
+          ds.developer,
+          s.name as secretary_name,
+          json_agg(DISTINCT sf.feature) as features,
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', ur.id::text,
+              'userName', ur.user_name,
+              'rating', ur.rating,
+              'comment', ur.comment,
+              'date', ur.date::text
+            )
+          ) as reviews,
+          -- ✅ CORREÇÃO DEFINITIVA
+          CASE 
+            WHEN ds.is_new THEN 
+              DATE_PART('day', CURRENT_DATE - ds.created_at)::integer
+            ELSE 61
+          END as days_since_creation,
+          (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
+        FROM digital_systems ds
+        LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
+        LEFT JOIN system_features sf ON ds.id = sf.system_id
+        LEFT JOIN user_reviews ur ON ds.id = ur.system_id
+        WHERE ds.id = $1
+        GROUP BY ds.id, s.name
+      `;
+      
+      console.log('📝 [MODEL] Executando query para sistema ID:', id);
+      
+      const result = await client.query(query, [id]);
+      
+      console.log('📊 [MODEL] Resultado da query:', {
+        rowsCount: result.rows.length,
+        systemId: id
+      });
+      
+      if (result.rows.length === 0) {
+        console.log('⚠️ [MODEL] Sistema não encontrado:', id);
+        return null;
+      }
+      
+      const system = this.mapToApiFormat(result.rows[0]);
+      console.log('✅ [MODEL] Sistema encontrado e mapeado:', {
+        id: system.id,
+        name: system.name,
+        reviewsCount: system.reviewsCount,
+        rating: system.rating
+      });
+      
+      return system;
+    } catch (error) {
+      console.error('❌ [MODEL] Erro ao buscar sistema por ID:', error);
+      console.error('❌ [MODEL] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      throw new Error(`Failed to fetch system: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      client.release();
     }
-    
-    const system = this.mapToApiFormat(result.rows[0]);
-    console.log('✅ [MODEL] Sistema encontrado e mapeado:', {
-      id: system.id,
-      name: system.name,
-      reviewsCount: system.reviewsCount,
-      rating: system.rating
-    });
-    
-    return system;
-  } catch (error) {
-    console.error('❌ [MODEL] Erro ao buscar sistema por ID:', error);
-    console.error('❌ [MODEL] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-    throw new Error(`Failed to fetch system: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-  } finally {
-    client.release();
   }
-}
 
   // Buscar sistemas por categoria
   static async findByCategory(category: string): Promise<ApiDigitalSystem[]> {
     return this.findAll({ category });
   }
 
-  // Buscar sistemas por departamento
+  // Buscar sistemas por departamento - MÉTODO MELHORADO
   static async findByDepartment(department: string): Promise<ApiDigitalSystem[]> {
-    return this.findAll({ department });
+    console.log('🔍 [SYSTEMMODEL] Buscando sistemas por departamento:', department);
+    
+    // ✅ MAPEAMENTO DIRETO PARA GARANTIR CORRETO
+    const departmentMap: Record<string, string> = {
+      'saude': 'SEMUS',
+      'meio-ambiente': 'SEMMAM', 
+      'seguranca': 'SEMUSC',
+      'educacao': 'SEMED',
+      'assistencia-social': 'SEMCAS',
+      'agricultura-pesca-abastecimento': 'SEMAPA',
+      'fazenda-financas': 'SEMFAZ',
+      'planejamento': 'SEPLAN',
+      'tecnologia': 'SEMIT',
+      'transito-transporte': 'SMTT',
+      'cultura': 'SECULT',
+      'urbanismo': 'SEMURH',
+      'comunicacao': 'SECOM',
+      'turismo': 'SETUR',
+      'administracao': 'SEMAD',
+      'inovacao-sustentabilidade': 'SEMISPE',
+      'pessoa-com-deficiencia': 'SEMEPED',
+      'patrimonio-historico': 'FUMPH',
+      'procuradoria': 'PGM',
+      'defesa-civil': 'DC'
+    };
+
+    const secretaryCode = departmentMap[department];
+    
+    if (!secretaryCode) {
+      console.log('❌ [SYSTEMMODEL] Departamento não mapeado:', department);
+      return [];
+    }
+
+    console.log('🔍 [SYSTEMMODEL] Mapeamento:', department, '→', secretaryCode);
+    
+    return this.findAll({ department: secretaryCode });
   }
 
   // Buscar sistemas em destaque
@@ -184,9 +220,9 @@ export class SystemModel {
     return this.findAll({ isHighlight: true });
   }
 
-  // ✅ BUSCAR SISTEMAS NOVOS: Apenas is_new = true E menos de 60 dias
+  // ✅ BUSCAR SISTEMAS NOVOS: Apenas is_new = true (SEM restrição de tempo)
   static async findNewSystems(): Promise<ApiDigitalSystem[]> {
-    return this.findAll({ recentlyAdded: true });
+    return this.findAll({ isNew: true });
   }
 
   // Buscar sistemas por termo de pesquisa
@@ -194,25 +230,25 @@ export class SystemModel {
     return this.findAll({ search: query });
   }
 
-  // ✅ BUSCAR SISTEMAS RECENTES: Apenas is_new = true E menos de 60 dias
+  // ✅ BUSCAR SISTEMAS RECENTES: Apenas is_new = true (SEM restrição de tempo)
   static async findRecentSystems(limit?: number): Promise<ApiDigitalSystem[]> {
     let query = `
       SELECT 
         ds.*,
         s.name as secretary_name,
         json_agg(DISTINCT sf.feature) as features,
-        -- ✅ CONTAGEM PARA SISTEMAS NOVOS: Apenas para is_new = true
+        -- ✅ CORREÇÃO DEFINITIVA
         CASE 
-          WHEN ds.is_new THEN EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE))
-          ELSE 61  -- Sistemas antigos sempre têm 61+ dias
+          WHEN ds.is_new THEN 
+            DATE_PART('day', CURRENT_DATE - ds.created_at)::integer
+          ELSE 61
         END as days_since_creation,
-        -- ✅ VERIFICAÇÃO DE NOVIDADE: Apenas is_new = true e menos de 60 dias
         (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
       FROM digital_systems ds
       LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
       LEFT JOIN system_features sf ON ds.id = sf.system_id
-      -- ✅ FILTRO: Apenas sistemas novos (is_new = true) e com menos de 60 dias
-      WHERE ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days'
+      -- ✅ FILTRO: Apenas sistemas novos (is_new = true) - SEM restrição de tempo
+      WHERE ds.is_new = true
       GROUP BY ds.id, s.name
       ORDER BY ds.created_at DESC
     `;
@@ -230,7 +266,7 @@ export class SystemModel {
     }
   }
 
-  // MÉTODO FALTANTE: Criar sistema
+  // MÉTODO FALTANTE: Criar sistema - AGORA COM is_new CONTROLADO MANUALMENTE
   static async create(systemData: Omit<DatabaseDigitalSystem, 'id' | 'created_at' | 'updated_at'>): Promise<ApiDigitalSystem> {
     const query = `
       INSERT INTO digital_systems (
@@ -252,7 +288,8 @@ export class SystemModel {
       systemData.launch_year,
       systemData.category,
       systemData.is_highlight || false,
-      true, // Sempre marcar como novo quando criar
+      // ✅ CORREÇÃO: Usar o valor fornecido ou false por padrão (não força true)
+      systemData.is_new || false,
       systemData.icon_url,
       systemData.access_url,
       systemData.usage_count || 0,
@@ -266,6 +303,7 @@ export class SystemModel {
     
     try {
       const result = await pool.query(query, values);
+      console.log(`✅ Sistema criado com is_new = ${systemData.is_new || false}`);
       return this.mapToApiFormat(result.rows[0]);
     } catch (error) {
       console.error('Error creating system:', error);
@@ -307,6 +345,12 @@ export class SystemModel {
       if (result.rows.length === 0) {
         throw new Error('System not found');
       }
+      
+      // Log para controle manual
+      if (systemData.is_new !== undefined) {
+        console.log(`✅ Sistema ${id} atualizado com is_new = ${systemData.is_new}`);
+      }
+      
       return this.mapToApiFormat(result.rows[0]);
     } catch (error) {
       console.error('Error updating system:', error);
@@ -418,24 +462,31 @@ export class SystemModel {
     }
   }
 
-  // Contar sistemas por departamento
+  // Contar sistemas por departamento - ATUALIZADO
   static async countByDepartment(): Promise<Record<string, number>> {
     const query = `
       SELECT 
         CASE 
           WHEN responsible_secretary = 'SEMUS' THEN 'saude'
           WHEN responsible_secretary = 'SEMED' THEN 'educacao'
-          WHEN responsible_secretary = 'SEMAS' THEN 'assistencia-social'
-          WHEN responsible_secretary = 'SEMAPA' THEN 'meio-ambiente'
+          WHEN responsible_secretary = 'SEMCAS' THEN 'assistencia-social'
+          WHEN responsible_secretary = 'SEMMAM' THEN 'meio-ambiente'
+          WHEN responsible_secretary = 'SEMAPA' THEN 'agricultura-pesca-abastecimento'
           WHEN responsible_secretary = 'SEMFAZ' THEN 'fazenda-financas'
           WHEN responsible_secretary = 'SEPLAN' THEN 'planejamento'
           WHEN responsible_secretary = 'SEMIT' THEN 'tecnologia'
-          WHEN responsible_secretary = 'SEMTT' THEN 'transito-transporte'
+          WHEN responsible_secretary = 'SMTT' THEN 'transito-transporte'
           WHEN responsible_secretary = 'SECULT' THEN 'cultura'
           WHEN responsible_secretary = 'SEMURH' THEN 'urbanismo'
-          WHEN responsible_secretary = 'SETUR' THEN 'turismo'
           WHEN responsible_secretary = 'SECOM' THEN 'comunicacao'
+          WHEN responsible_secretary = 'SETUR' THEN 'turismo'
           WHEN responsible_secretary = 'SEMUSC' THEN 'seguranca'
+          WHEN responsible_secretary = 'SEMAD' THEN 'administracao'
+          WHEN responsible_secretary = 'SEMISPE' THEN 'inovacao-sustentabilidade'
+          WHEN responsible_secretary = 'SEMEPED' THEN 'pessoa-com-deficiencia'
+          WHEN responsible_secretary = 'FUMPH' THEN 'patrimonio-historico'
+          WHEN responsible_secretary = 'PGM' THEN 'procuradoria'
+          WHEN responsible_secretary = 'DC' THEN 'defesa-civil'
           ELSE 'outros'
         END as department,
         COUNT(*) as count
@@ -455,7 +506,6 @@ export class SystemModel {
       throw new Error('Failed to count systems by department');
     }
   }
-
 
   // ✅✅✅ CORREÇÃO CRÍTICA: Adicionar uma nova avaliação - COM ATUALIZAÇÃO DE RATING E CONTAGEM
   static async addReview(systemId: number, reviewData: {
@@ -658,7 +708,8 @@ export class SystemModel {
       launchYear: row.launch_year,
       category: row.category,
       isHighlight: row.is_highlight,
-      isNew: Boolean(row.is_new && isNewByDate),
+      // ✅✅✅ CORREÇÃO CRÍTICA: Usar apenas is_new do banco (SEM restrição de tempo)
+      isNew: Boolean(row.is_new),
       iconUrl: row.icon_url,
       accessUrl: row.access_url,
       usageCount: Number(row.usage_count) || 0,

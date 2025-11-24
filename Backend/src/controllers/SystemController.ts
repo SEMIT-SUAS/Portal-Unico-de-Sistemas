@@ -3,7 +3,179 @@ import { Request, Response } from 'express';
 import { SystemModel } from '../models/SystemModel';
 import pool from '../config/database';
 
+// ✅ MAPEAMENTO CORRETO E COMPLETO DOS DEPARTAMENTOS
+const departmentSecretaryMap: Record<string, string[]> = {
+  'saude': ['SEMUS'], // Apenas SEMUS - NÃO inclui SEMUSC
+  'educacao': ['SEMED'],
+  'assistencia-social': ['SEMCAS'],
+  'meio-ambiente': ['SEMMAM'], // Apenas SEMMAM - NÃO inclui SEMAPA
+  'agricultura-pesca-abastecimento': ['SEMAPA'], // ✅ NOVO: Departamento específico para SEMAPA
+  'fazenda-financas': ['SEMFAZ'],
+  'planejamento': ['SEPLAN'],
+  'tecnologia': ['SEMIT'],
+  'transito-transporte': ['SMTT'],
+  'cultura': ['SECULT'],
+  'urbanismo': ['SEMURH'],
+  'comunicacao': ['SECOM'],
+  'turismo': ['SETUR'],
+  'seguranca': ['SEMUSC'], // Apenas SEMUSC - NÃO inclui SEMUS
+  'administracao': ['SEMAD'], // ✅ NOVO
+  'inovacao-sustentabilidade': ['SEMISPE'], // ✅ NOVO
+  'pessoa-com-deficiencia': ['SEMEPED'], // ✅ NOVO
+  'patrimonio-historico': ['FUMPH'], // ✅ NOVO
+  'procuradoria': ['PGM'], // ✅ NOVO
+  'defesa-civil': ['DC'] // ✅ NOVO
+};
+
 export class SystemController {
+  // ✅ MÉTODO DE DEBUG: Testar mapeamento de departamentos
+  static async testDepartmentMapping(req: Request, res: Response) {
+    console.log('🧪 [TEST] Testando mapeamento de departamentos:');
+    
+    const testCases = [
+      'saude',
+      'seguranca', 
+      'meio-ambiente',
+      'agricultura-pesca-abastecimento'
+    ];
+    
+    const results = testCases.map(dept => {
+      const secretaries = departmentSecretaryMap[dept];
+      return {
+        department: dept,
+        secretaries: secretaries,
+        condition: secretaries.map((s, i) => `responsible_secretary = $${i + 1}`).join(' OR ')
+      };
+    });
+    
+    console.log('🧪 [TEST] Resultados do mapeamento:', results);
+    
+    res.json({
+      success: true,
+      mapping: results,
+      departmentSecretaryMap // Retornar o mapeamento completo
+    });
+  }
+
+  // ✅ MÉTODO DE DEBUG: Testar filtro por departamento
+  static async testDepartmentFilter(req: Request, res: Response) {
+    const { department } = req.query;
+    
+    console.log('🧪 [TEST] Testando filtro por departamento:', department);
+    
+    if (!department || typeof department !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Parâmetro department é obrigatório'
+      });
+    }
+
+    const secretaries = departmentSecretaryMap[department];
+    
+    if (!secretaries || secretaries.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `Departamento não encontrado: ${department}`
+      });
+    }
+
+    console.log(`🧪 [TEST] Departamento "${department}" → Secretarias:`, secretaries);
+    
+    // Testar a query que seria executada
+    const conditions = secretaries.map((secretary, index) => 
+      `responsible_secretary = $${index + 1}`
+    ).join(' OR ');
+
+    const testQuery = `
+      SELECT COUNT(*) as total_systems
+      FROM digital_systems 
+      WHERE ${conditions}
+    `;
+
+    try {
+      const client = await pool.connect();
+      const result = await client.query(testQuery, secretaries);
+      const totalSystems = parseInt(result.rows[0].total_systems);
+      
+      client.release();
+      
+      res.json({
+        success: true,
+        department,
+        secretaries,
+        queryCondition: conditions,
+        expectedSystems: totalSystems,
+        testQuery: testQuery,
+        testParameters: secretaries
+      });
+      
+    } catch (error) {
+      console.error('Error testing department filter:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao testar filtro',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  }
+
+  // ✅ MÉTODO DE DEBUG: Listar todos os sistemas com suas secretarias
+  static async debugAllSystems(req: Request, res: Response) {
+    let client;
+    try {
+      client = await pool.connect();
+      
+      const query = `
+        SELECT 
+          id, 
+          name, 
+          responsible_secretary,
+          category,
+          is_new,
+          created_at
+        FROM digital_systems 
+        ORDER BY responsible_secretary, name
+      `;
+      
+      const result = await client.query(query);
+      
+      // Agrupar por secretaria para análise
+      const systemsBySecretary = result.rows.reduce((acc: any, system) => {
+        const secretary = system.responsible_secretary;
+        if (!acc[secretary]) {
+          acc[secretary] = [];
+        }
+        acc[secretary].push({
+          id: system.id,
+          name: system.name,
+          category: system.category,
+          isNew: system.is_new,
+          createdAt: system.created_at
+        });
+        return acc;
+      }, {});
+      
+      console.log('🔍 [DEBUG] Sistemas por secretaria:', systemsBySecretary);
+      
+      res.json({
+        success: true,
+        totalSystems: result.rows.length,
+        systemsBySecretary,
+        departmentMapping: departmentSecretaryMap
+      });
+      
+    } catch (error) {
+      console.error('Error in debugAllSystems:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro no debug',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
+    }
+  }
+
   // ✅ ATUALIZADO: Obter todos os sistemas com mesma lógica para Destaques e Novidades
   static async getAllSystems(req: Request, res: Response) {
     let client;
@@ -18,6 +190,15 @@ export class SystemController {
         recentlyAdded
       } = req.query;
       
+      console.log(`🔍 [CONTROLLER] getAllSystems chamado com filters:`, {
+        category, 
+        department, 
+        search, 
+        isNew, 
+        isHighlight,
+        recentlyAdded
+      });
+
       const filters = {
         category: category as string,
         department: department as string,
@@ -32,6 +213,8 @@ export class SystemController {
       // ✅ MESMA LÓGICA PARA DESTAQUES E NOVIDADES
       const featuredSystems = systems.filter(system => system.isHighlight);
       const newSystems = systems.filter(system => system.isNew);
+      
+      console.log(`🔍 [CONTROLLER] getAllSystems retornou ${systems.length} sistemas`);
       
       res.json({
         success: true,
@@ -132,59 +315,59 @@ export class SystemController {
 
   // Obter sistema por ID (MANTIDO)
   static async getSystemById(req: Request, res: Response) {
-  let client;
-  try {
-    console.log('🎯 [CONTROLLER] getSystemById CHAMADO!');
-    console.log('🎯 [CONTROLLER] Params:', req.params);
-    
-    client = await pool.connect();
-    const id = parseInt(req.params.id);
-    
-    console.log('🔍 [CONTROLLER] Buscando sistema ID:', id);
-    
-    if (isNaN(id)) {
-      console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
-      return res.status(400).json({
-        success: false,
-        message: 'ID inválido'
+    let client;
+    try {
+      console.log('🎯 [CONTROLLER] getSystemById CHAMADO!');
+      console.log('🎯 [CONTROLLER] Params:', req.params);
+      
+      client = await pool.connect();
+      const id = parseInt(req.params.id);
+      
+      console.log('🔍 [CONTROLLER] Buscando sistema ID:', id);
+      
+      if (isNaN(id)) {
+        console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
+        return res.status(400).json({
+          success: false,
+          message: 'ID inválido'
+        });
+      }
+
+      console.log('💾 [CONTROLLER] Chamando SystemModel.findById...');
+      const system = await SystemModel.findById(id);
+      
+      if (!system) {
+        console.log('❌ [CONTROLLER] Sistema não encontrado:', id);
+        return res.status(404).json({
+          success: false,
+          message: 'Sistema não encontrado'
+        });
+      }
+
+      console.log('✅ [CONTROLLER] Sistema encontrado:', {
+        id: system.id,
+        name: system.name,
+        reviewsCount: system.reviewsCount,
+        rating: system.rating
       });
-    }
 
-    console.log('💾 [CONTROLLER] Chamando SystemModel.findById...');
-    const system = await SystemModel.findById(id);
-    
-    if (!system) {
-      console.log('❌ [CONTROLLER] Sistema não encontrado:', id);
-      return res.status(404).json({
-        success: false,
-        message: 'Sistema não encontrado'
+      res.json({
+        success: true,
+        data: system
       });
+    } catch (error) {
+      console.error('❌ [CONTROLLER] Erro ao buscar sistema:', error);
+      console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno ao buscar sistema',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
     }
-
-    console.log('✅ [CONTROLLER] Sistema encontrado:', {
-      id: system.id,
-      name: system.name,
-      reviewsCount: system.reviewsCount,
-      rating: system.rating
-    });
-
-    res.json({
-      success: true,
-      data: system
-    });
-  } catch (error) {
-    console.error('❌ [CONTROLLER] Erro ao buscar sistema:', error);
-    console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-    
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno ao buscar sistema',
-      error: error instanceof Error ? error.message : 'Erro desconhecido'
-    });
-  } finally {
-    if (client) client.release();
   }
-}
 
   // Obter sistemas por categoria (MANTIDO)
   static async getSystemsByCategory(req: Request, res: Response) {
@@ -212,19 +395,147 @@ export class SystemController {
     }
   }
 
-  // Obter sistemas por departamento (MANTIDO)
+  // ✅ CORRIGIDO: Obter sistemas por departamento - USANDO MAPEAMENTO CORRETO
   static async getSystemsByDepartment(req: Request, res: Response) {
     let client;
     try {
       client = await pool.connect();
       const { department } = req.params;
-      const systems = await SystemModel.findByDepartment(department);
       
+      console.log(`🔍 [CONTROLLER] Buscando sistemas por departamento: ${department}`);
+      
+      // ✅ USAR O MAPEAMENTO CORRETO
+      const secretaries = departmentSecretaryMap[department] || [department];
+      
+      if (secretaries.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Departamento não encontrado'
+        });
+      }
+
+      console.log(`📋 [CONTROLLER] Secretarias mapeadas:`, secretaries);
+      
+      const conditions = secretaries.map((secretary, index) => 
+        `responsible_secretary = $${index + 1}`
+      ).join(' OR ');
+
+      const query = `
+        SELECT 
+          ds.*,
+          s.name as secretary_name,
+          json_agg(DISTINCT sf.feature) as features,
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', ur.id::text,
+              'userName', ur.user_name,
+              'rating', ur.rating,
+              'comment', ur.comment,
+              'date', ur.date::text
+            )
+          ) as reviews,
+          -- ✅ ADICIONAR CAMPOS PARA NOVIDADES
+          CASE 
+            WHEN ds.is_new THEN EXTRACT(DAYS FROM (CURRENT_DATE - ds.created_at::DATE))
+            ELSE 61
+          END as days_since_creation,
+          (ds.is_new AND ds.created_at >= CURRENT_DATE - INTERVAL '60 days') as is_new_by_date
+        FROM digital_systems ds
+        LEFT JOIN secretaries s ON ds.responsible_secretary = s.code
+        LEFT JOIN system_features sf ON ds.id = sf.system_id
+        LEFT JOIN user_reviews ur ON ds.id = ur.system_id
+        WHERE ${conditions}
+        GROUP BY ds.id, s.name
+        ORDER BY ds.created_at DESC
+      `;
+
+      console.log(`📝 [CONTROLLER] Executando query com condições: ${conditions}`);
+      console.log(`🔧 [CONTROLLER] Parâmetros:`, secretaries);
+
+      const result = await client.query(query, secretaries);
+      
+      console.log(`✅ [CONTROLLER] Encontrados ${result.rows.length} sistemas`);
+      
+      // ✅ CORREÇÃO: Mapear os resultados manualmente
+      const systems = result.rows.map(row => {
+        const isNewByDate = row.is_new_by_date;
+        const daysSinceCreation = row.days_since_creation;
+
+        // Processar reviews
+        const userReviews = (row.reviews || [])
+          .filter((r: any) => r.id !== null && r.id !== undefined)
+          .map((review: any) => ({
+            id: review.id,
+            userName: review.userName,
+            rating: review.rating,
+            comment: review.comment,
+            date: review.date
+          }));
+
+        // Calcular rating correto
+        const calculateCorrectRating = (): number => {
+          const dbRating = parseFloat(row.rating);
+          if (!isNaN(dbRating) && dbRating > 0) {
+            return dbRating;
+          }
+          
+          if (userReviews.length > 0) {
+            const avgRating = userReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / userReviews.length;
+            return parseFloat(avgRating.toFixed(1));
+          }
+          
+          return 0;
+        };
+
+        const finalRating = calculateCorrectRating();
+        const reviewsCountFromDb = Number(row.reviews_count) || 0;
+        const reviewsCountFromArray = userReviews.length;
+        const finalReviewsCount = Math.max(reviewsCountFromDb, reviewsCountFromArray);
+
+        return {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          fullDescription: row.full_description,
+          targetAudience: row.target_audience,
+          responsibleSecretary: row.responsible_secretary,
+          launchYear: row.launch_year,
+          category: row.category,
+          isHighlight: row.is_highlight,
+          isNew: Boolean(row.is_new && isNewByDate),
+          iconUrl: row.icon_url,
+          accessUrl: row.access_url,
+          usageCount: Number(row.usage_count) || 0,
+          downloads: row.downloads,
+          rating: finalRating,
+          reviewsCount: finalReviewsCount,
+          hasPWA: row.has_pwa,
+          pwaUrl: row.pwa_url,
+          mainFeatures: row.features || [],
+          userReviews: userReviews,
+          secretaryName: row.secretary_name,
+          developer: row.developer,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          daysSinceCreation: daysSinceCreation,
+          isNewByDate: isNewByDate,
+          daysRemaining: (row.is_new && isNewByDate) ? Math.max(0, 60 - daysSinceCreation) : 0
+        };
+      });
+      
+      console.log(`📊 [CONTROLLER] Sistemas mapeados:`, systems.map(s => ({
+        id: s.id,
+        name: s.name,
+        secretary: s.responsibleSecretary,
+        isNew: s.isNew
+      })));
+
       res.json({
         success: true,
         data: systems,
         count: systems.length,
-        department
+        department,
+        secretaries: secretaries // Para debug
       });
     } catch (error) {
       console.error('Error fetching systems by department:', error);
@@ -274,95 +585,95 @@ export class SystemController {
 
   // ✅✅✅ CORRIGIDO: Adicionar avaliação - COM LOGS DETALHADOS
   static async addReview(req: Request, res: Response) {
-  let client;
-  try {
-    console.log('🎯 [CONTROLLER] addReview CHAMADO!');
-    console.log('🎯 [CONTROLLER] URL:', req.url);
-    console.log('🎯 [CONTROLLER] Method:', req.method);
-    console.log('🎯 [CONTROLLER] Params:', req.params);
-    console.log('🎯 [CONTROLLER] Body:', JSON.stringify(req.body, null, 2));
-    
-    client = await pool.connect();
-    const id = parseInt(req.params.id);
-    
-    console.log('📥 [CONTROLLER] Recebendo avaliação para sistema ID:', id);
-    
-    if (isNaN(id)) {
-      console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
-      return res.status(400).json({
-        success: false,
-        message: 'ID inválido'
+    let client;
+    try {
+      console.log('🎯 [CONTROLLER] addReview CHAMADO!');
+      console.log('🎯 [CONTROLLER] URL:', req.url);
+      console.log('🎯 [CONTROLLER] Method:', req.method);
+      console.log('🎯 [CONTROLLER] Params:', req.params);
+      console.log('🎯 [CONTROLLER] Body:', JSON.stringify(req.body, null, 2));
+      
+      client = await pool.connect();
+      const id = parseInt(req.params.id);
+      
+      console.log('📥 [CONTROLLER] Recebendo avaliação para sistema ID:', id);
+      
+      if (isNaN(id)) {
+        console.log('❌ [CONTROLLER] ID inválido:', req.params.id);
+        return res.status(400).json({
+          success: false,
+          message: 'ID inválido'
+        });
+      }
+
+      const { userName, rating, comment, demographics, location } = req.body;
+
+      console.log('👤 [CONTROLLER] Dados extraídos:', {
+        userName,
+        rating,
+        comment,
+        demographics,
+        location
       });
-    }
 
-    const { userName, rating, comment, demographics, location } = req.body;
+      // Validações mais robustas
+      if (!userName || userName.trim() === '') {
+        console.log('❌ [CONTROLLER] Nome de usuário vazio');
+        return res.status(400).json({
+          success: false,
+          message: 'Nome de usuário é obrigatório'
+        });
+      }
 
-    console.log('👤 [CONTROLLER] Dados extraídos:', {
-      userName,
-      rating,
-      comment,
-      demographics,
-      location
-    });
+      if (!rating || rating < 1 || rating > 5) {
+        console.log('❌ [CONTROLLER] Rating inválido:', rating);
+        return res.status(400).json({
+          success: false,
+          message: 'A avaliação deve ser entre 1 e 5'
+        });
+      }
 
-    // Validações mais robustas
-    if (!userName || userName.trim() === '') {
-      console.log('❌ [CONTROLLER] Nome de usuário vazio');
-      return res.status(400).json({
-        success: false,
-        message: 'Nome de usuário é obrigatório'
+      console.log('💾 [CONTROLLER] Chamando SystemModel.addReview...');
+      
+      // ✅ CORREÇÃO: Aguardar a conclusão e capturar possíveis erros
+      const result = await SystemModel.addReview(id, {
+        userName: userName.trim(),
+        rating: Number(rating),
+        comment: (comment || '').trim(),
+        demographics,
+        location
       });
-    }
 
-    if (!rating || rating < 1 || rating > 5) {
-      console.log('❌ [CONTROLLER] Rating inválido:', rating);
-      return res.status(400).json({
-        success: false,
-        message: 'A avaliação deve ser entre 1 e 5'
+      console.log('✅ [CONTROLLER] Avaliação processada com sucesso, resultado:', result);
+
+      // ✅ BUSCAR SISTEMA ATUALIZADO PARA RETORNAR DADOS CORRETOS
+      console.log('🔄 [CONTROLLER] Buscando sistema atualizado...');
+      const updatedSystem = await SystemModel.findById(id);
+      
+      if (!updatedSystem) {
+        console.log('⚠️ [CONTROLLER] Sistema não encontrado após atualização');
+      }
+
+      console.log('✅ [CONTROLLER] Resposta enviada com sucesso');
+      
+      res.json({
+        success: true,
+        message: 'Avaliação adicionada com sucesso',
+        system: updatedSystem // ✅ RETORNAR SISTEMA ATUALIZADO
       });
+    } catch (error) {
+      console.error('❌ [CONTROLLER] Erro ao adicionar avaliação:', error);
+      console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno ao adicionar avaliação',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    } finally {
+      if (client) client.release();
     }
-
-    console.log('💾 [CONTROLLER] Chamando SystemModel.addReview...');
-    
-    // ✅ CORREÇÃO: Aguardar a conclusão e capturar possíveis erros
-    const result = await SystemModel.addReview(id, {
-      userName: userName.trim(),
-      rating: Number(rating),
-      comment: (comment || '').trim(),
-      demographics,
-      location
-    });
-
-    console.log('✅ [CONTROLLER] Avaliação processada com sucesso, resultado:', result);
-
-    // ✅ BUSCAR SISTEMA ATUALIZADO PARA RETORNAR DADOS CORRETOS
-    console.log('🔄 [CONTROLLER] Buscando sistema atualizado...');
-    const updatedSystem = await SystemModel.findById(id);
-    
-    if (!updatedSystem) {
-      console.log('⚠️ [CONTROLLER] Sistema não encontrado após atualização');
-    }
-
-    console.log('✅ [CONTROLLER] Resposta enviada com sucesso');
-    
-    res.json({
-      success: true,
-      message: 'Avaliação adicionada com sucesso',
-      system: updatedSystem // ✅ RETORNAR SISTEMA ATUALIZADO
-    });
-  } catch (error) {
-    console.error('❌ [CONTROLLER] Erro ao adicionar avaliação:', error);
-    console.error('❌ [CONTROLLER] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-    
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno ao adicionar avaliação',
-      error: error instanceof Error ? error.message : 'Erro desconhecido'
-    });
-  } finally {
-    if (client) client.release();
   }
-}
 
   // ✅ MÉTODO INCREMENT DOWNLOADS (MANTIDO)
   static async incrementDownloads(req: Request, res: Response) {

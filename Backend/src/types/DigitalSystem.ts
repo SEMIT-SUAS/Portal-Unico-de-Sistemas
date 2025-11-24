@@ -66,11 +66,12 @@ export const secretaries = {
   'SEMURH': 'Secretaria Municipal de Urbanismo e Habitação',
   'SEPLAN': 'Secretaria Municipal de Planejamento',
   'SEMFAZ': 'Secretaria Municipal da Fazenda',
-  'SEMAPA': 'Secretaria Municipal de Meio Ambiente e Proteção Animal',
+  'SEMMAM': 'Secretaria Municipal de Meio Ambiente e Proteção Animal',
   'SEMED': 'Secretaria Municipal de Educação',
   'SEMTT': 'Secretaria Municipal de Trânsito e Transporte',
   'SECULT': 'Secretaria Municipal de Cultura',
-  'SEMAS': 'Secretaria Municipal de Assistência Social'
+  'SEMAS': 'Secretaria Municipal de Assistência Social',
+  'SEMAPA': 'Secretaria Municipal de Agricultura e Abastecimento'
 } as const;
 
 // Tipo para representar um sistema do banco de dados

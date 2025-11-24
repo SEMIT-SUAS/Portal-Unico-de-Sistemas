@@ -248,7 +248,7 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
   return (
     <>
       <Dialog open={!!system} onOpenChange={() => onClose()}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto overflor-x-hidden">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="sr-only">{system.name}</DialogTitle>
             <DialogDescription className="sr-only">

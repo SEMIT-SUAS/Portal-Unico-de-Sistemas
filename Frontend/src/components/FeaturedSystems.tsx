@@ -17,14 +17,24 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
   const [currentNewIndex, setCurrentNewIndex] = useState(0);
   const [imageKey, setImageKey] = useState(0);
   
+  // DEBUG: Verifique os sistemas que estão chegando
+  console.log('🔍 Todos os sistemas:', systems);
+  
   const featuredSystems = systems.filter(system => system.isHighlight);
   const newSystems = systems.filter(system => system.isNew);
+  
+  // DEBUG: Verifique as filtragens
+  console.log('🌟 Sistemas em destaque:', featuredSystems);
+  console.log('🆕 Sistemas novos:', newSystems);
+  console.log('✅ isNew values:', systems.map(s => ({ name: s.name, isNew: s.isNew })));
 
   useEffect(() => {
     setImageKey(prev => prev + 1);
   }, [currentFeaturedIndex, currentNewIndex]);
 
   useEffect(() => {
+    if (featuredSystems.length === 0) return;
+    
     const timer = setInterval(() => {
       setCurrentFeaturedIndex((prevIndex) => 
         prevIndex === featuredSystems.length - 1 ? 0 : prevIndex + 1
@@ -35,6 +45,8 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
   }, [featuredSystems.length]);
 
   useEffect(() => {
+    if (newSystems.length === 0) return;
+    
     const timer = setInterval(() => {
       setCurrentNewIndex((prevIndex) => 
         prevIndex === newSystems.length - 1 ? 0 : prevIndex + 1
@@ -46,12 +58,14 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
 
   // Funções de navegação para Destaques
   const nextFeatured = () => {
+    if (featuredSystems.length === 0) return;
     setCurrentFeaturedIndex((prevIndex) => 
       prevIndex === featuredSystems.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const prevFeatured = () => {
+    if (featuredSystems.length === 0) return;
     setCurrentFeaturedIndex((prevIndex) => 
       prevIndex === 0 ? featuredSystems.length - 1 : prevIndex - 1
     );
@@ -59,12 +73,14 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
 
   // Funções de navegação para Novidades
   const nextNew = () => {
+    if (newSystems.length === 0) return;
     setCurrentNewIndex((prevIndex) => 
       prevIndex === newSystems.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const prevNew = () => {
+    if (newSystems.length === 0) return;
     setCurrentNewIndex((prevIndex) => 
       prevIndex === 0 ? newSystems.length - 1 : prevIndex - 1
     );
@@ -73,7 +89,15 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
   if (featuredSystems.length === 0 && newSystems.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-yellow-50 py-4 featured-systems-custom">
+    <div 
+      className="bg-gradient-to-r from-blue-50 to-yellow-50 py-4 featured-systems-custom"
+      style={{
+        '--image-width': '33.333%',
+        '--image-max-size': '120px',
+        '--image-border-radius': '8px',
+        '--card-padding-x': '2rem',
+      } as React.CSSProperties}
+    >
       <div className="container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-4">
           {/* Destaques */}
@@ -88,13 +112,21 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                 <CardContent className="p-6 h-full">
                   <div className="flex h-full items-center justify-center pl-8 pr-8 py-4">
                     {/* Setas de navegação para Destaques */}
-                    {featuredSystems.length > 0 && (
-                      <button
-                        onClick={prevFeatured}
-                        className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
-                      >
-                        <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
-                      </button>
+                    {featuredSystems.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevFeatured}
+                          className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
+                        </button>
+                        <button
+                          onClick={nextFeatured}
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        >
+                          <ChevronRight className="h-4 w-4 text-white rounded-sm" />
+                        </button>
+                      </>
                     )}
                     
                     <div className="image-container relative ml-4">
@@ -125,15 +157,6 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                         Ver Detalhes
                       </Button>
                     </div>
-
-                    {featuredSystems.length > 0 && (
-                      <button
-                        onClick={nextFeatured}
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
-                      >
-                        <ChevronRight className="h-4 w-4 text-white rounded-sm" />
-                      </button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -152,13 +175,21 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                 <CardContent className="p-6 h-full">
                   <div className="flex h-full items-center justify-center pl-8 pr-8 py-4">
                     {/* Setas de navegação para Novidades */}
-                    {newSystems.length > 0 && (
-                      <button
-                        onClick={prevNew}
-                        className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
-                      >
-                        <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
-                      </button>
+                    {newSystems.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevNew}
+                          className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-white rounded-sm" />
+                        </button>
+                        <button
+                          onClick={nextNew}
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
+                        >
+                          <ChevronRight className="h-4 w-4 text-white rounded-sm" />
+                        </button>
+                      </>
                     )}
                     
                     <div className="image-container relative ml-4">
@@ -189,15 +220,6 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
                         Ver Detalhes
                       </Button>
                     </div>
-
-                    {newSystems.length > 0 && (
-                      <button
-                        onClick={nextNew}
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 rounded-full p-1 transition-all"
-                      >
-                        <ChevronRight className="h-4 w-4 text-white rounded-sm" />
-                      </button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -205,44 +227,6 @@ export function FeaturedSystems({ systems, onSystemClick }: FeaturedSystemsProps
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        .featured-systems-custom {
-          --image-width: 33.333%; /* Equivale a w-1/3 - AJUSTE AQUI */
-          --image-max-size: 120px; /* Tamanho máximo - AJUSTE AQUI */
-          --image-border-radius: 8px; /* Border radius - AJUSTE AQUI */
-          --card-padding-x: 2rem; /* px-8 - AJUSTE AQUI */
-        }
-
-        .image-container {
-          width: var(--image-width);
-          max-width: var(--image-max-size);
-        }
-
-        .system-image {
-          border-radius: var(--image-border-radius);
-        }
-
-        /* Para telas grandes (monitor) */
-        @media (min-width: 1440px) {
-          .featured-systems-custom {
-            --image-width: 25%; /* Reduz para 1/4 em telas grandes */
-            --image-max-size: 140px; /* Aumenta um pouco o máximo */
-            --image-border-radius: 12px; /* Bordas mais arredondadas */
-            --card-padding-x: 3rem; /* Mais padding nas laterais */
-          }
-        }
-
-        /* Para telas muito grandes (4K) */
-        @media (min-width: 1920px) {
-          .featured-systems-custom {
-            --image-width: 20%; /* Reduz ainda mais para telas muito grandes */
-            --image-max-size: 160px;
-            --image-border-radius: 16px;
-            --card-padding-x: 4rem;
-          }
-        }
-      `}</style>
     </div>
   );
 }

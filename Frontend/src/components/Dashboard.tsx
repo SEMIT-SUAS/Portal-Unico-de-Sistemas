@@ -17,25 +17,30 @@ interface DashboardProps {
 }
 
 export function Dashboard({ systems, stats, selectedDepartment, departmentCategories }: DashboardProps) {
-  // Filtrar sistemas pela secretaria selecionada
+  // Filtrar sistemas pela secretaria selecionada - CORREÇÃO APLICADA AQUI
   const filteredSystems = selectedDepartment 
     ? systems.filter(system => {
         const departmentMap: Record<string, string[]> = {
           'saude': ['SEMUS'],
           'educacao': ['SEMED'],
           'assistencia-social': ['SEMAS'],
-          'meio-ambiente': ['SEMAPA'],
+          'meio-ambiente': ['SEMMAM'],
           'fazenda-financas': ['SEMFAZ'],
           'planejamento': ['SEPLAN'],
           'tecnologia': ['SEMIT'],
           'transito-transporte': ['SEMTT'],
           'cultura': ['SECULT'],
-          'urbanismo': ['SEMURH']
+          'urbanismo': ['SEMURH'],
+          'comunicacao': ['SECOM'],
+          'turismo': ['SETUR'],
+          'seguranca': ['SEMUSC']
         };
         
         const relevantSecretaries = departmentMap[selectedDepartment] || [];
+        
+        // CORREÇÃO: Usar igualdade exata em vez de includes
         return relevantSecretaries.some(secretary => 
-          system.responsibleSecretary.includes(secretary)
+          system.responsibleSecretary === secretary // Mudança crucial: === em vez de includes
         );
       })
     : systems;

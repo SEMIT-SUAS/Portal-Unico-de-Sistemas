@@ -42,6 +42,20 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  // Log detalhado apenas para rotas relevantes
+  if (req.path.includes('/systems') || req.path.includes('/department') || req.query.department) {
+    console.log(`🔍 [SYSTEMS DEBUG] ${req.method} ${req.originalUrl}`);
+    console.log(`🔍 [SYSTEMS DEBUG] Query:`, req.query);
+    console.log(`🔍 [SYSTEMS DEBUG] Params:`, req.params);
+    console.log(`🔍 [SYSTEMS DEBUG] Headers:`, {
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    });
+  }
+  next();
+});
+
 // ✅ DEBUG: Middleware para log de todas as requisições
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.originalUrl}`);

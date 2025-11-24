@@ -11,6 +11,7 @@ import React from "react";
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [systemNameFilter, setSystemNameFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedSystem, setSelectedSystem] = useState<DigitalSystem | null>(null);
@@ -22,7 +23,7 @@ export default function App() {
   const { incrementDownload } = useSystemDownloads();
   const { incrementAccess } = useSystemAccess();
 
-  // Filter systems based on search, category, and department
+  // Filter systems based on search, category, and department - APENAS para a listagem
   const filteredSystems = useMemo(() => {
     if (loading) return [];
     if (error) return [];
@@ -41,18 +42,26 @@ export default function App() {
       );
     }
 
+    // Filter by system name (novo filtro específico)
+    if (systemNameFilter.trim()) {
+      const nameTerm = systemNameFilter.toLowerCase();
+      filtered = filtered.filter(system => 
+        system.name.toLowerCase().includes(nameTerm)
+      );
+    }
+
     // Filter by category
     if (selectedCategory) {
       filtered = filtered.filter(system => system.category === selectedCategory);
     }
 
-    // Filter by department
+    // Filter by department - CORREÇÃO APLICADA AQUI
     if (selectedDepartment) {
       const departmentMap: Record<string, string[]> = {
         'saude': ['SEMUS'],
         'educacao': ['SEMED'],
         'assistencia-social': ['SEMAS'],
-        'meio-ambiente': ['SEMAPA'],
+        'meio-ambiente': ['SEMMAM'],
         'fazenda-financas': ['SEMFAZ'],
         'planejamento': ['SEPLAN'],
         'tecnologia': ['SEMIT'],
@@ -65,17 +74,19 @@ export default function App() {
       };
       
       const relevantSecretaries = departmentMap[selectedDepartment] || [];
+      
+      // CORREÇÃO: Usar igualdade exata em vez de includes
       filtered = filtered.filter(system => 
         relevantSecretaries.some(secretary => 
-          system.responsibleSecretary.includes(secretary)
+          system.responsibleSecretary === secretary
         )
       );
     }
 
     return filtered;
-  }, [searchTerm, selectedCategory, selectedDepartment, systems, loading, error]);
+  }, [searchTerm, systemNameFilter, selectedCategory, selectedDepartment, systems, loading, error]);
 
-  // Count systems by category
+  // Count systems by category (usa todos os sistemas, não os filtrados)
   const systemCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     Object.keys(categories).forEach(category => {
@@ -133,11 +144,12 @@ export default function App() {
 
   const clearFilters = () => {
     setSearchTerm("");
+    setSystemNameFilter("");
     setSelectedCategory(null);
     setSelectedDepartment(null);
   };
 
-  // Determinar quando mostrar o Dashboard
+  // Determinar quando mostrar o Dashboard - NÃO considera systemNameFilter
   const shouldShowDashboard = !searchTerm && !selectedCategory;
   const shouldShowFeaturedSystems = !searchTerm && !selectedCategory && !selectedDepartment;
 
@@ -187,7 +199,7 @@ export default function App() {
         onDepartmentChange={setSelectedDepartment}
       />
 
-      {/* Dashboard - show when no search/category filter */}
+      {/* Dashboard - show when no search/category filter - NÃO considera systemNameFilter */}
       {shouldShowDashboard && stats && (
         <Dashboard 
           systems={systems} 
@@ -203,7 +215,7 @@ export default function App() {
         />
       )}
 
-      {/* Featured Systems - only show when no filters at all */}
+      {/* Featured Systems - only show when no filters at all - NÃO considera systemNameFilter */}
       {shouldShowFeaturedSystems && (
         <FeaturedSystems 
           systems={systems}
@@ -213,44 +225,10 @@ export default function App() {
 
       {/* Systems Grid */}
       <div className="container mx-auto px-4 py-8">
-        {filteredSystems.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg 
-                className="mx-auto h-12 w-12" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nenhum sistema encontrado
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchTerm 
-                ? `Não encontramos sistemas que correspondam à busca "${searchTerm}"`
-                : selectedDepartment
-                  ? `Não há sistemas na secretaria selecionada`
-                  : `Não há sistemas na categoria selecionada`
-              }
-            </p>
-            <button
-              onClick={clearFilters}
-              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            >
-              Limpar filtros
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between mb-6">
+        {/* Cabeçalho com título e buscador - SEMPRE VISÍVEL */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
                   {(() => {
@@ -274,36 +252,135 @@ export default function App() {
                 </h2>
                 <p className="text-gray-600 mt-1">
                   {filteredSystems.length} sistema{filteredSystems.length !== 1 ? 's' : ''} encontrado{filteredSystems.length !== 1 ? 's' : ''}
-                  {(selectedCategory || selectedDepartment || searchTerm) && (
+                  {(selectedCategory || selectedDepartment || searchTerm || systemNameFilter) && (
                     <span className="text-sm ml-2">
-                      ({(selectedCategory || selectedDepartment) && searchTerm ? 'filtros combinados' : 'filtrado'})
+                      ({(selectedCategory || selectedDepartment || searchTerm || systemNameFilter) ? 'filtros combinados' : 'filtrado'})
                     </span>
                   )}
                 </p>
               </div>
               
-              {(searchTerm || selectedCategory || selectedDepartment) && (
-                <button
-                  onClick={clearFilters}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
-                >
-                  Limpar filtros
-                </button>
-              )}
+              {/* Buscador por nome - LARGURA AUMENTADA */}
+              <div className="ml-6 flex-shrink-0">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-2 pl-3 flex items-center pointer-events-none">
+                    <svg 
+                      className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                      />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar sistemas..."
+                    value={systemNameFilter}
+                    onChange={(e) => setSystemNameFilter(e.target.value)}
+                    className="pl-10 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-96 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-gray-700 placeholder-gray-400"
+                  />
+                  {systemNameFilter && (
+                    <button
+                      onClick={() => setSystemNameFilter("")}
+                      className="absolute inset-y-0 right-2 pr-3 flex items-center group/clear"
+                    >
+                      <svg 
+                        className="h-4 w-4 text-gray-400 hover:text-gray-600 group-hover/clear:scale-110 transition-all" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M6 18L18 6M6 6l12 12" 
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {/* Efeito de foco suave */}
+                  <div className="absolute inset-0 rounded-xl bg-blue-500 opacity-0 group-focus-within:opacity-5 transition-opacity duration-200 pointer-events-none"></div>
+                </div>
+                
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredSystems.map((system) => (
-                <SystemCard
-                  key={system.id}
-                  system={system}
-                  onSystemClick={setSelectedSystem}
-                  onDownload={() => handleDownload(system.id)}
-                  onAccess={() => handleAccess(system.id)}
+        {/* Botão Limpar Filtros - quando há filtros ativos */}
+        {/* {(searchTerm || selectedCategory || selectedDepartment || systemNameFilter) && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors px-3 py-2 rounded-lg hover:bg-blue-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Limpar todos os filtros
+            </button>
+          </div>
+        )} */}
+
+        {/* Conteúdo - Sistemas ou Mensagem de Nenhum Resultado */}
+        {filteredSystems.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-300 mb-4">
+              <svg 
+                className="mx-auto h-16 w-16" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={1.5} 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
                 />
-              ))}
+              </svg>
             </div>
-          </>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Nenhum sistema encontrado
+            </h3>
+            <p className="text-gray-500 mb-4 max-w-md mx-auto">
+              {searchTerm || systemNameFilter
+                ? `Não encontramos sistemas que correspondam à busca "${searchTerm || systemNameFilter}". Tente ajustar os termos da busca.`
+                : selectedDepartment
+                  ? `Não há sistemas disponíveis na secretaria selecionada no momento.`
+                  : `Não há sistemas disponíveis na categoria selecionada no momento.`
+              }
+            </p>
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Limpar filtros e ver todos
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredSystems.map((system) => (
+              <SystemCard
+                key={system.id}
+                system={system}
+                onSystemClick={setSelectedSystem}
+                onDownload={() => handleDownload(system.id)}
+                onAccess={() => handleAccess(system.id)}
+              />
+            ))}
+          </div>
         )}
       </div>
 

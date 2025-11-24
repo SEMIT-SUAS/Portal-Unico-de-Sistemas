@@ -99,13 +99,13 @@ export function CategoryNav({
   return (
     <div className="bg-white border-b sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {/* Filtros ativos */}
           {(selectedCategory || selectedDepartment) && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Filtros ativos:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <span className="text-sm text-gray-600 flex-shrink-0">Filtros ativos:</span>
               {selectedCategory && (
-                <div className="relative inline-flex items-center">
+                <div className="relative inline-flex items-center flex-shrink-0">
                   <Badge variant="default" className="bg-blue-600 flex items-center gap-1 pr-8">
                     {categories[selectedCategory as keyof typeof categories]}
                   </Badge>
@@ -119,7 +119,7 @@ export function CategoryNav({
                 </div>
               )}
               {selectedDepartment && (
-                <div className="relative inline-flex items-center">
+                <div className="relative inline-flex items-center flex-shrink-0">
                   <Badge variant="default" className="bg-green-600 flex items-center gap-1 pr-8">
                     {departmentCategories[selectedDepartment as keyof typeof departmentCategories]}
                   </Badge>
@@ -136,18 +136,18 @@ export function CategoryNav({
                 variant="ghost" 
                 size="sm" 
                 onClick={clearAllFilters}
-                className="text-xs h-6 px-2"
+                className="text-xs h-6 px-2 flex-shrink-0"
               >
                 Limpar todos
               </Button>
             </div>
           )}
           
-          {/* Filtros disponíveis */}
-          <div className="flex flex-wrap gap-2">
+          {/* Filtros disponíveis com scroll horizontal para mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-4">
             <Badge
               variant={selectedCategory === null && selectedDepartment === null ? "default" : "secondary"}
-              className={`cursor-pointer transition-all ${
+              className={`cursor-pointer transition-all flex-shrink-0 ${
                 selectedCategory === null && selectedDepartment === null
                   ? "bg-blue-600 hover:bg-blue-700" 
                   : "hover:bg-gray-200"
@@ -161,7 +161,7 @@ export function CategoryNav({
               <Badge
                 key={key}
                 variant={selectedCategory === key ? "default" : "secondary"}
-                className={`cursor-pointer transition-all ${
+                className={`cursor-pointer transition-all flex-shrink-0 ${
                   selectedCategory === key 
                     ? "bg-blue-600 hover:bg-blue-700" 
                     : "hover:bg-gray-200"
@@ -178,7 +178,7 @@ export function CategoryNav({
                 <Button
                   variant={selectedDepartment ? "default" : "secondary"}
                   size="sm"
-                  className={`transition-all ${
+                  className={`transition-all flex-shrink-0 ${
                     selectedDepartment 
                       ? "bg-green-600 hover:bg-green-700" 
                       : "hover:bg-gray-200"
@@ -186,7 +186,7 @@ export function CategoryNav({
                 >
                   {selectedDepartment 
                     ? departmentCategories[selectedDepartment as keyof typeof departmentCategories]
-                    : "Por Secretaria"
+                    : "Secretarias"
                   }
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>

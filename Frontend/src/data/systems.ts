@@ -8,7 +8,7 @@ export interface DigitalSystem {
   launchYear: number;
   mainFeatures: string[];
   category: 'novidades' | 'destaques' | 'mais-usados' | 'cidadao' | 'interno' | 'por-secretaria' | 'inativos'; // Adicione 'inativos'
-  isHighlight?: boolean;
+  isHighlight?: boolean;  
   isNew?: boolean;
   iconUrl?: string;
   accessUrl?: string;
@@ -246,12 +246,13 @@ export const secretaries = {
   'SEMURH': 'Secretaria Municipal de Urbanismo e Habitação',
   'SEPLAN': 'Secretaria Municipal de Planejamento',
   'SEMFAZ': 'Secretaria Municipal da Fazenda',
-  'SEMAPA': 'Secretaria Municipal de Meio Ambiente e Proteção Animal',
+  'SEMMAM': 'Secretaria Municipal de Meio Ambiente e Proteção Animal',
   'SEMED': 'Secretaria Municipal de Educação',
   'SMTT': 'Secretaria Municipal de Trânsito e Transporte',
   'SECULT': 'Secretaria Municipal de Cultura',
   'SEMAS': 'Secretaria Municipal de Assistência Social',
   'SECOM': 'Secretaria Municipal de Comunicação',
   'SETUR': 'Secretaria Municipal de Turismo',
-  'SEMUSC': 'Secretaria Municipal de Segurança com Cidadania'
+  'SEMUSC': 'Secretaria Municipal de Segurança com Cidadania',
+  'SEMAPA': 'Secretaria Municipal de Agricultura e Abastecimento'
 };
