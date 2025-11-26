@@ -343,7 +343,7 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Code className="h-5 w-5 text-blue-600" />
                 <div>
-                  <p className="font-medium">Desenvolvidor Por:</p>
+                  <p className="font-medium">Desenvolvido Por:</p>
                   <p className="text-sm text-gray-600">{system.developer}</p>
                 </div>
               </div>
