@@ -50,11 +50,17 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
 
   return (
     <Card 
-      className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-full"
+      className="group hover:shadow-lg transition-all duration-300 cursor-pointer h-full relative overflow-hidden"
       onClick={handleCardClick} // Move o clique para o card inteiro
     >
+      {/* Bolinha de status no canto superior direito */}
+      <div className={`absolute top-1.5 right-2 w-3 h-3 rounded-full z-10 border-2 border-white shadow-sm ${
+        isInactive ? 'bg-destructive' : 'bg-green-600'
+      }`} />
+      
       <div className="w-full h-full">
-        <div className="flex p-4 items-start h-full w-full">
+        {/* Ajustei o padding-top para descer o conteúdo */}
+        <div className="flex p-4 pt-6 items-start h-full w-full">
           {/* Ícone com tamanho responsivo */}
           <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 ${
             isInactive 
@@ -97,13 +103,6 @@ export function SystemCard({ system, onSystemClick }: SystemCardProps) {
                   <span className={isInactive ? 'text-gray-500' : 'text-gray-400'}>({system.reviewsCount})</span>
                 )}
               </div>
-              
-              {isInactive && (
-                <Badge variant="default" className="bg-red-500 hover:bg-red-600 text-white text-xs px-1.5 py-0.5 flex items-center gap-1 shrink-0 ml-2">
-                  <Ban className="h-2.5 w-2.5" />
-                  INATIVO
-                </Badge>
-              )}
             </div>
           </div>
         </div>
