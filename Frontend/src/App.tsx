@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+// src/App.tsx
+import { useState, useMemo, useEffect } from "react";
 import { Header } from "./components/Header";
 import { CategoryNav } from "./components/CategoryNav";
 import { Dashboard } from "./components/Dashboard";
@@ -9,12 +10,22 @@ import { useSystems, useDashboard, useSystemOperations, useSystemDownloads, useS
 import { DigitalSystem, categories, departmentCategories } from "./data/systems";
 import React from "react";
 
+// Interface para cache local de reviews
+interface CachedReview {
+  id: string;
+  systemId: number;
+  review: any;
+  timestamp: number;
+}
+
 export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [systemNameFilter, setSystemNameFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selectedSystem, setSelectedSystem] = useState<DigitalSystem | null>(null);
+  const [cachedReviews, setCachedReviews] = useState<CachedReview[]>([]);
+  const [lastReviewTime, setLastReviewTime] = useState<number>(0);
   
   // Usar hooks personalizados
   const { systems, loading, error, refetch } = useSystems();
@@ -23,12 +34,63 @@ export default function App() {
   const { incrementDownload } = useSystemDownloads();
   const { incrementAccess } = useSystemAccess();
 
-  // Filter systems based on search, category, and department - APENAS para a listagem
+  // Carregar reviews em cache do localStorage
+  useEffect(() => {
+    const savedReviews = localStorage.getItem('systemReviewsCache');
+    if (savedReviews) {
+      try {
+        const parsed = JSON.parse(savedReviews);
+        setCachedReviews(parsed);
+      } catch (error) {
+        console.error('Erro ao carregar cache de reviews:', error);
+      }
+    }
+  }, []);
+
+  // Salvar reviews em cache no localStorage
+  useEffect(() => {
+    localStorage.setItem('systemReviewsCache', JSON.stringify(cachedReviews));
+  }, [cachedReviews]);
+
+  // Função para obter sistema com cache aplicado
+  const getSystemWithCache = (system: DigitalSystem): DigitalSystem => {
+    // Buscar reviews em cache para este sistema
+    const systemCachedReviews = cachedReviews
+      .filter(cr => cr.systemId === system.id)
+      .map(cr => cr.review);
+
+    if (systemCachedReviews.length === 0) {
+      return system;
+    }
+
+    // Combinar reviews do sistema com cache
+    const allReviews = [...systemCachedReviews, ...(system.userReviews || [])];
+    
+    // Calcular nova média
+    const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
+    const newAverage = totalRating / allReviews.length;
+
+    return {
+      ...system,
+      userReviews: allReviews,
+      reviewsCount: allReviews.length,
+      rating: parseFloat(newAverage.toFixed(1))
+    };
+  };
+
+  // Função para obter cached reviews de um sistema específico
+  const getCachedReviewsForSystem = (systemId: number) => {
+    return cachedReviews
+      .filter(cr => cr.systemId === systemId)
+      .map(cr => cr.review)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  // Filter systems based on search, category, and department
   const filteredSystems = useMemo(() => {
     if (loading) return [];
-    if (error) return [];
 
-    let filtered = systems;
+    let filtered = systems.map(getSystemWithCache);
 
     // Filter by search term
     if (searchTerm.trim()) {
@@ -42,7 +104,7 @@ export default function App() {
       );
     }
 
-    // Filter by system name (novo filtro específico)
+    // Filter by system name
     if (systemNameFilter.trim()) {
       const nameTerm = systemNameFilter.toLowerCase();
       filtered = filtered.filter(system => 
@@ -55,7 +117,7 @@ export default function App() {
       filtered = filtered.filter(system => system.category === selectedCategory);
     }
 
-    // Filter by department - CORREÇÃO APLICADA AQUI
+    // Filter by department
     if (selectedDepartment) {
       const departmentMap: Record<string, string[]> = {
         'saude': ['SEMUS'],
@@ -75,7 +137,6 @@ export default function App() {
       
       const relevantSecretaries = departmentMap[selectedDepartment] || [];
       
-      // CORREÇÃO: Usar igualdade exata em vez de includes
       filtered = filtered.filter(system => 
         relevantSecretaries.some(secretary => 
           system.responsibleSecretary === secretary
@@ -84,9 +145,9 @@ export default function App() {
     }
 
     return filtered;
-  }, [searchTerm, systemNameFilter, selectedCategory, selectedDepartment, systems, loading, error]);
+  }, [searchTerm, systemNameFilter, selectedCategory, selectedDepartment, systems, loading, cachedReviews]);
 
-  // Count systems by category (usa todos os sistemas, não os filtrados)
+  // Count systems by category
   const systemCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     Object.keys(categories).forEach(category => {
@@ -104,25 +165,67 @@ export default function App() {
     }
   };
 
-  // ✅ CORRIGIDO: Usar o hook addReview
+  // Função para adicionar review com cache otimista
   const handleAddReview = async (systemId: number, ratingData: any) => {
     try {
-      console.log('📝 Enviando avaliação do App.tsx...');
+      console.log('📝 [APP] Enviando avaliação...', ratingData);
+      
+      // 1. Criar review otimista com ID único
+      const reviewId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const optimisticReview = {
+        id: reviewId,
+        userName: ratingData.userName,
+        rating: ratingData.rating,
+        comment: ratingData.comment,
+        date: new Date().toISOString(),
+        ...(ratingData.demographics && {
+          cor: ratingData.demographics.cor,
+          sexo: ratingData.demographics.sexo,
+          idade: ratingData.demographics.idade
+        })
+      };
+
+      // 2. Adicionar ao cache IMEDIATAMENTE
+      setCachedReviews(prev => [
+        ...prev,
+        {
+          id: reviewId,
+          systemId,
+          review: optimisticReview,
+          timestamp: Date.now()
+        }
+      ]);
+
+      // 3. Atualizar o tempo da última review
+      setLastReviewTime(Date.now());
+
+      // 4. Enviar para o backend
       const success = await addReview(systemId, ratingData);
+      
       if (success) {
-        console.log('✅ Avaliação adicionada com sucesso, recarregando dados...');
-        await refetch();
+        console.log('✅ [APP] Avaliação enviada com sucesso para o backend');
+        
+        // 5. NÃO REMOVE DO CACHE IMEDIATAMENTE
+        console.log('💾 [APP] Cache mantido para mostrar "enviando..."');
+        
+        // 6. Atualiza os dados em background
+        setTimeout(() => {
+          refetch();
+          console.log('🔄 [APP] Dados atualizados em background');
+        }, 2000);
+        
         return true;
       } else {
-        throw new Error('Erro ao adicionar avaliação');
+        console.error('❌ [APP] Erro ao enviar avaliação para o backend');
+        return false;
       }
     } catch (error) {
       console.error('Error adding review:', error);
-      throw error;
+      return false;
     }
   };
 
-  // ✅ Handler para download
+  // Handler para download
   const handleDownload = async (systemId: number) => {
     try {
       await incrementDownload(systemId);
@@ -132,7 +235,7 @@ export default function App() {
     }
   };
 
-  // ✅ Handler para acesso
+  // Handler para acesso
   const handleAccess = async (systemId: number) => {
     try {
       await incrementAccess(systemId);
@@ -142,6 +245,16 @@ export default function App() {
     }
   };
 
+  // Função para limpar cache quando fechar o modal
+  const handleCloseModal = () => {
+    if (selectedSystem) {
+      const systemId = selectedSystem.id;
+      setCachedReviews(prev => prev.filter(cr => cr.systemId !== systemId));
+      console.log('🗑️ [APP] Cache limpo ao fechar modal do sistema', systemId);
+    }
+    setSelectedSystem(null);
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setSystemNameFilter("");
@@ -149,7 +262,7 @@ export default function App() {
     setSelectedDepartment(null);
   };
 
-  // Determinar quando mostrar o Dashboard - NÃO considera systemNameFilter
+  // Determinar quando mostrar o Dashboard
   const shouldShowDashboard = !searchTerm && !selectedCategory;
   const shouldShowFeaturedSystems = !searchTerm && !selectedCategory && !selectedDepartment;
 
@@ -199,7 +312,7 @@ export default function App() {
         onDepartmentChange={setSelectedDepartment}
       />
 
-      {/* Dashboard - show when no search/category filter - NÃO considera systemNameFilter */}
+      {/* Dashboard */}
       {shouldShowDashboard && stats && (
         <Dashboard 
           systems={systems} 
@@ -215,7 +328,7 @@ export default function App() {
         />
       )}
 
-      {/* Featured Systems - only show when no filters at all - NÃO considera systemNameFilter */}
+      {/* Featured Systems */}
       {shouldShowFeaturedSystems && (
         <FeaturedSystems 
           systems={systems}
@@ -225,7 +338,6 @@ export default function App() {
 
       {/* Systems Grid */}
       <div className="container mx-auto px-4 py-8">
-        {/* Cabeçalho com título e buscador - SEMPRE VISÍVEL */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex-1">
             <div className="flex items-center justify-between">
@@ -252,15 +364,10 @@ export default function App() {
                 </h2>
                 <p className="text-gray-600 mt-1">
                   {filteredSystems.length} sistema{filteredSystems.length !== 1 ? 's' : ''} encontrado{filteredSystems.length !== 1 ? 's' : ''}
-                  {(selectedCategory || selectedDepartment || searchTerm || systemNameFilter) && (
-                    <span className="text-sm ml-2">
-                      ({(selectedCategory || selectedDepartment || searchTerm || systemNameFilter) ? 'filtros combinados' : 'filtrado'})
-                    </span>
-                  )}
                 </p>
               </div>
               
-              {/* Buscador por nome - LARGURA AUMENTADA */}
+              {/* Buscador por nome */}
               <div className="ml-6 flex-shrink-0">
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-2 pl-3 flex items-center pointer-events-none">
@@ -305,18 +412,14 @@ export default function App() {
                       </svg>
                     </button>
                   )}
-                  
-                  {/* Efeito de foco suave */}
-                  <div className="absolute inset-0 rounded-xl bg-blue-500 opacity-0 group-focus-within:opacity-5 transition-opacity duration-200 pointer-events-none"></div>
                 </div>
-                
               </div>
             </div>
           </div>
         </div>
 
-        {/* Botão Limpar Filtros - quando há filtros ativos */}
-        {/* {(searchTerm || selectedCategory || selectedDepartment || systemNameFilter) && (
+        {/* Botão Limpar Filtros */}
+        {(searchTerm || selectedCategory || selectedDepartment || systemNameFilter) && (
           <div className="flex justify-end mb-4">
             <button
               onClick={clearFilters}
@@ -328,7 +431,7 @@ export default function App() {
               Limpar todos os filtros
             </button>
           </div>
-        )} */}
+        )}
 
         {/* Conteúdo - Sistemas ou Mensagem de Nenhum Resultado */}
         {filteredSystems.length === 0 ? (
@@ -351,14 +454,6 @@ export default function App() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Nenhum sistema encontrado
             </h3>
-            <p className="text-gray-500 mb-4 max-w-md mx-auto">
-              {searchTerm || systemNameFilter
-                ? `Não encontramos sistemas que correspondam à busca "${searchTerm || systemNameFilter}". Tente ajustar os termos da busca.`
-                : selectedDepartment
-                  ? `Não há sistemas disponíveis na secretaria selecionada no momento.`
-                  : `Não há sistemas disponíveis na categoria selecionada no momento.`
-              }
-            </p>
             <button
               onClick={clearFilters}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -373,11 +468,10 @@ export default function App() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredSystems.map((system) => (
               <SystemCard
-                key={system.id}
+                key={`${system.id}-${lastReviewTime}`}
                 system={system}
                 onSystemClick={setSelectedSystem}
-                onDownload={() => handleDownload(system.id)}
-                onAccess={() => handleAccess(system.id)}
+                forceRefreshKey={lastReviewTime.toString()}
               />
             ))}
           </div>
@@ -387,12 +481,13 @@ export default function App() {
       {/* System Detail Modal */}
       <SystemModal
         system={selectedSystem}
-        onClose={() => setSelectedSystem(null)}
+        onClose={handleCloseModal}
         onSystemUpdate={handleSystemUpdate}
-        onAddReview={handleAddReview}  
+        onAddReview={handleAddReview}
         onDownload={selectedSystem ? () => handleDownload(selectedSystem.id) : undefined}
         onAccess={selectedSystem ? () => handleAccess(selectedSystem.id) : undefined}
         reviewLoading={reviewLoading}
+        cachedReviews={selectedSystem ? getCachedReviewsForSystem(selectedSystem.id) : []}
       />
 
       {/* Footer */}

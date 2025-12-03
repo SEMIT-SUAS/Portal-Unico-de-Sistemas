@@ -1,6 +1,6 @@
 // src/components/SystemModal.tsx
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ExternalLink, Calendar, Users, Building, CheckCircle, Download, Star, Smartphone, MessageSquare, Code, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
@@ -10,32 +10,59 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { DigitalSystem } from "../data/systems";
 import { ReviewsModal } from "./ReviewsModal";
 import { RatingModal, RatingData } from "./RatingModal";
-import { systemService } from "../services/api";
 
 interface SystemModalProps {
   system: DigitalSystem | null;
   onClose: () => void;
   onSystemUpdate?: (updatedSystem: DigitalSystem) => void;
   onAddReview?: (systemId: number, ratingData: any) => Promise<boolean>;
+  onDownload?: () => void;
+  onAccess?: () => void;
+  reviewLoading?: boolean;
+  cachedReviews?: any[];
 }
 
-export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: SystemModalProps) {
+export function SystemModal({ 
+  system, 
+  onClose, 
+  onSystemUpdate, 
+  onAddReview, 
+  onDownload,
+  onAccess,
+  reviewLoading = false,
+  cachedReviews = []
+}: SystemModalProps) {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isAccessing, setIsAccessing] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(false);
+  const [localReviews, setLocalReviews] = useState<any[]>([]);
+
+  // Inicializa reviews locais quando o sistema muda
+  useEffect(() => {
+    if (system) {
+      setLocalReviews(system.userReviews || []);
+    }
+  }, [system]);
 
   if (!system) return null;
 
-  console.log('🔍 [SYSTEMMODAL] Sistema carregado:', {
-    id: system.id,
-    name: system.name,
-    reviewsCount: system.reviewsCount,
-    userReviews: system.userReviews?.length || 0
-  });
+  // Combina reviews: cache (com "enviando...") + reviews locais
+  const allReviews = [...cachedReviews, ...localReviews];
+  const displayedReviews = allReviews.slice(0, 3);
+  const hasMoreReviews = allReviews.length > 3;
 
-  const formatNumber = (num: number) => {
+  // Calcula rating baseado em todas as reviews
+  const calculateRating = () => {
+    if (allReviews.length === 0) return system.rating || 0;
+    const totalRating = allReviews.reduce((sum: number, review: any) => sum + review.rating, 0);
+    return parseFloat((totalRating / allReviews.length).toFixed(1));
+  };
+
+  const currentRating = calculateRating();
+
+  const formatNumber = (num: number | undefined) => {
+    if (!num) return "0";
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
     } else if (num >= 1000) {
@@ -69,32 +96,14 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
     try {
       setIsDownloading(true);
       
-      console.log(`📥 [SYSTEMMODAL] Iniciando download para: ${system.name} (ID: ${system.id})`);
-      console.log(`📊 [SYSTEMMODAL] Downloads atuais: ${system.downloads || 0}`);
-      
-      try {
-        const response = await systemService.incrementDownloads(system.id);
-        console.log('✅ [SYSTEMMODAL] Download contabilizado NO BANCO:', response.data);
-        
-        const responseData = response.data as { newCount: number; success?: boolean; message?: string };
-        
-        if (onSystemUpdate) {
-          const updatedSystem: DigitalSystem = {
-            ...system,
-            downloads: responseData.newCount
-          };
-          onSystemUpdate(updatedSystem);
-          console.log('📊 [SYSTEMMODAL] Contador de downloads atualizado com valor REAL:', responseData.newCount);
-        }
-      } catch (apiError) {
-        console.warn('⚠️ [SYSTEMMODAL] API de downloads falhou, mas continuando com o download...', apiError);
+      if (onDownload) {
+        onDownload();
       }
       
-      console.log(`🌐 [SYSTEMMODAL] Abrindo URL: ${system.pwaUrl}`);
       window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
       
     } catch (error) {
-      console.error('❌ [SYSTEMMODAL] Erro inesperado durante download:', error);
+      console.error('❌ [SYSTEMMODAL] Erro durante download:', error);
       window.open(system.pwaUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setIsDownloading(false);
@@ -107,34 +116,14 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
     try {
       setIsAccessing(true);
       
-      console.log(`🚀 [SYSTEMMODAL] Iniciando acesso para: ${system.name} (ID: ${system.id})`);
-      console.log(`📈 [SYSTEMMODAL] Acessos atuais: ${system.usageCount || 0}`);
-      
-      try {
-        const response = await systemService.incrementAccess(system.id);
-        console.log('✅ [SYSTEMMODAL] Acesso contabilizado NO BANCO:', response.data);
-
-        const responseData = response.data as { newCount: number; success?: boolean; message?: string };
-        
-        const newCount = Number(responseData.newCount) || (system.usageCount || 0) + 1;
-        
-        if (onSystemUpdate) {
-          const updatedSystem: DigitalSystem = {
-            ...system,
-            usageCount: newCount
-          };
-          onSystemUpdate(updatedSystem);
-          console.log('📈 [SYSTEMMODAL] Contador de acessos atualizado com valor REAL:', responseData.newCount);
-        }
-      } catch (apiError) {
-        console.warn('⚠️ [SYSTEMMODAL] API de acessos falhou, mas continuando com o acesso...', apiError);
+      if (onAccess) {
+        onAccess();
       }
       
-      console.log(`🌐 [SYSTEMMODAL] Abrindo URL: ${system.accessUrl}`);
       window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
       
     } catch (error) {
-      console.error('❌ [SYSTEMMODAL] Erro inesperado durante acesso:', error);
+      console.error('❌ [SYSTEMMODAL] Erro durante acesso:', error);
       window.open(system.accessUrl, '_blank', 'noopener,noreferrer');
     } finally {
       setIsAccessing(false);
@@ -143,107 +132,40 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
 
   const handleRatingSubmit = async (ratingData: RatingData) => {
     try {
-      console.log('📝 [SYSTEMMODAL] Dados da avaliação recebidos:', JSON.stringify(ratingData, null, 2));
+      console.log('📝 [SYSTEMMODAL] Enviando avaliação...');
       
-      if (!system) {
-        console.error('❌ [SYSTEMMODAL] Sistema não definido');
-        return;
-      }
+      if (!system) return;
 
-      console.log('🚀 [SYSTEMMODAL] Iniciando envio de avaliação para sistema ID:', system.id);
+      // Fecha o modal de avaliação IMEDIATAMENTE
+      setShowRatingModal(false);
 
-      if (onAddReview && onSystemUpdate) {
-        console.log('🔄 [SYSTEMMODAL] Usando onAddReview do hook...');
-        setReviewLoading(true);
+      // Tenta enviar para o backend via App.tsx
+      if (onAddReview) {
+        const systemId = typeof system.id === 'string' ? parseInt(system.id, 10) : system.id;
         
-        const currentReviews = system.userReviews || [];
-        
-        const newReview = {
-          id: `temp-${Date.now()}`,
+        const success = await onAddReview(systemId, {
           userName: ratingData.userName.trim(),
           rating: ratingData.rating,
           comment: ratingData.comment?.trim() || '',
-          date: new Date().toISOString().split('T')[0],
-          ...(ratingData.demographics && {
-            cor: ratingData.demographics.cor,
-            sexo: ratingData.demographics.sexo,
-            idade: ratingData.demographics.idade
-          })
-        };
-        
-        const updatedReviews = [newReview, ...currentReviews];
-        const newReviewsCount = updatedReviews.length;
-        
-        const totalRating = updatedReviews.reduce((sum: number, review: any) => sum + review.rating, 0);
-        const newRating = parseFloat((totalRating / newReviewsCount).toFixed(1));
-        
-        const optimisticSystem: DigitalSystem = {
-          ...system,
-          userReviews: updatedReviews,
-          reviewsCount: newReviewsCount,
-          rating: newRating
-        };
-        
-        console.log('🎯 [SYSTEMMODAL] Aplicando atualização otimista:', {
-          novasAvaliacoes: newReviewsCount,
-          novoRating: newRating,
-          reviewTemporaria: newReview.id
+          demographics: ratingData.demographics,
+          location: ratingData.location
         });
-        
-        onSystemUpdate(optimisticSystem);
-        console.log('✅ [SYSTEMMODAL] Atualização otimista aplicada - avaliação visível AGORA!');
-        
-        setShowRatingModal(false);
-        
-        try {
-          // ✅ CORREÇÃO: Converter system.id para número
-          const systemId = Number(system.id);
-          const success = await onAddReview(systemId, {
-            userName: ratingData.userName.trim(),
-            rating: ratingData.rating,
-            comment: ratingData.comment?.trim() || '',
-            demographics: ratingData.demographics,
-            location: ratingData.location
-          });
 
-          if (success) {
-            console.log('✅ [SYSTEMMODAL] Avaliação enviada com sucesso para o backend');
-            
-            console.log('✅ [SYSTEMMODAL] Avaliação sincronizada localmente - operação concluída');
-            
-          } else {
-            console.error('❌ [SYSTEMMODAL] Falha ao enviar avaliação para o backend');
-            console.warn('⚠️ [SYSTEMMODAL] Revertendo atualização otimista...');
-            onSystemUpdate(system);
-            alert('Erro ao enviar avaliação. Tente novamente.');
-          }
-        } catch (error) {
-          console.error('❌ [SYSTEMMODAL] Erro durante o envio para o backend:', error);
-          console.warn('⚠️ [SYSTEMMODAL] Revertendo atualização otimista devido a erro...');
-          onSystemUpdate(system);
-          alert('Erro ao enviar avaliação. Verifique os dados e tente novamente.');
+        if (success) {
+          console.log('✅ [SYSTEMMODAL] Avaliação enviada com sucesso');
+        } else {
+          console.error('❌ [SYSTEMMODAL] Falha ao enviar avaliação');
         }
-      } else {
-        console.error('❌ [SYSTEMMODAL] Funções de atualização não disponíveis');
-        alert('Erro: Sistema não configurado para receber avaliações.');
       }
       
     } catch (error) {
       console.error('❌ [SYSTEMMODAL] Erro ao processar avaliação:', error);
-      alert('Erro inesperado ao enviar avaliação. Tente novamente.');
-    } finally {
-      setReviewLoading(false);
     }
   };
 
   const isValidUrl = (url: string | undefined) => {
     return url && url !== '#' && (url.startsWith('http://') || url.startsWith('https://'));
   };
-
-  const displayedReviews = system.userReviews?.slice(0, 3) || [];
-  const hasMoreReviews = (system.userReviews?.length || 0) > 3;
-
-  const safeRating = getRatingNumber(system.rating);
 
   return (
     <>
@@ -284,22 +206,20 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
                 <p className="text-gray-600 mt-2 break-words">{system.description}</p>
                 
                 <div className="flex items-center gap-6 mt-3 flex-wrap">
-                  {safeRating > 0 && (
+                  {currentRating > 0 && (
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
-                        {renderStars(safeRating)}
+                        {renderStars(currentRating)}
                       </div>
-                      <span className="font-semibold">{safeRating.toFixed(1)}</span>
-                      {system.reviewsCount && (
-                        <span className="text-gray-500 text-sm">({system.reviewsCount} avaliações)</span>
-                      )}
+                      <span className="font-semibold">{currentRating.toFixed(1)}</span>
+                      <span className="text-gray-500 text-sm">({allReviews.length} avaliações)</span>
                     </div>
                   )}
                   
                   <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4 text-blue-600" />
                     <span className="font-semibold text-blue-600">
-                      {formatNumber(system.usageCount || 0)} acessos
+                      {formatNumber(system.usageCount)} acessos
                     </span>
                   </div>
                   
@@ -395,67 +315,106 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
               </div>
             </div>
 
-            {(displayedReviews.length > 0 || !system.userReviews?.length) && (
-              <>
-                <Separator />
-                <div>
-                  <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-2">
-                    <h3 className="font-semibold">Avaliações dos Usuários</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowRatingModal(true)}
-                        className="gap-2"
-                        disabled={reviewLoading}
-                      >
-                        <Star className="h-4 w-4" />
-                        {reviewLoading ? 'Enviando...' : 'Avaliar'}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {displayedReviews.length > 0 ? (
-                    <div className="space-y-4">
-                      {displayedReviews.map((review) => (
-                        <div key={review.id} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex items-start justify-between mb-2 flex-col sm:flex-row gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                {review.userName.charAt(0)}
-                              </div>
-                              <span className="font-medium break-words">{review.userName}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {renderStars(review.rating)}
-                              <span className="text-sm text-gray-500 ml-1">
-                                {new Date(review.date).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-gray-700 leading-relaxed break-words">{review.comment}</p>
-                        </div>
-                      ))}
-                      
-                      {hasMoreReviews && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowAllReviews(true)}
-                          className="w-full gap-2"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Ver mais comentários ({(system.userReviews?.length || 0) - 3} restantes)
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Seja o primeiro a avaliar este sistema!</p>
-                    </div>
+            <Separator />
+            
+            <div>
+              <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-2">
+                <h3 className="font-semibold">Avaliações dos Usuários</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRatingModal(true)}
+                    className="gap-2"
+                    disabled={reviewLoading}
+                  >
+                    <Star className="h-4 w-4" />
+                    {reviewLoading ? 'Enviando...' : 'Avaliar'}
+                  </Button>
+                  {allReviews.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAllReviews(true)}
+                      className="gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Ver todas ({allReviews.length})
+                    </Button>
                   )}
                 </div>
-              </>
-            )}
+              </div>
+              
+              {displayedReviews.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Indicador de avaliações sendo processadas */}
+                  {cachedReviews.length > 0 && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-yellow-700">
+                          {cachedReviews.length === 1 
+                            ? '1 avaliação sendo processada...' 
+                            : `${cachedReviews.length} avaliações sendo processadas...`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {displayedReviews.map((review) => (
+                    <div key={review.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-start justify-between mb-2 flex-col sm:flex-row gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                            {review.userName?.charAt(0) || 'U'}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-medium break-words">{review.userName || 'Usuário'}</span>
+                            {/* Badge para avaliações otimistas */}
+                            {review.id && review.id.includes('temp-') && (
+                              <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full mt-1 inline-block w-fit">
+                                Enviando...
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {renderStars(review.rating)}
+                          <span className="text-sm text-gray-500 ml-1">
+                            {new Date(review.date).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 leading-relaxed break-words">{review.comment}</p>
+                    </div>
+                  ))}
+                  
+                  {hasMoreReviews && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllReviews(true)}
+                      className="w-full gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Ver mais comentários ({allReviews.length - 3} restantes)
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-lg font-medium mb-2">Nenhuma avaliação ainda</p>
+                  <p className="text-gray-600 mb-4">Seja o primeiro a avaliar este sistema!</p>
+                  <Button
+                    onClick={() => setShowRatingModal(true)}
+                    className="gap-2"
+                  >
+                    <Star className="h-4 w-4" />
+                    Avaliar Agora
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <div className="flex justify-end pt-4">
               <Button 
@@ -471,10 +430,14 @@ export function SystemModal({ system, onClose, onSystemUpdate, onAddReview }: Sy
       </Dialog>
 
       <ReviewsModal
-        reviews={system.userReviews || []}
+        reviews={allReviews}
         systemName={system.name}
         isOpen={showAllReviews}
         onClose={() => setShowAllReviews(false)}
+        onOpenReviewForm={() => {
+          setShowAllReviews(false);
+          setTimeout(() => setShowRatingModal(true), 100);
+        }}
       />
 
       <RatingModal
