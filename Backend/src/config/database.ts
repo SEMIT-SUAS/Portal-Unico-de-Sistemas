@@ -6,11 +6,11 @@ dotenv.config();
 
 // Configuração do pool de conexões
 const dbConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: 'PUS',
-  user: process.env.DB_USER || 'postgres',
-  password: 'root',
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER ,
+  password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
