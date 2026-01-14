@@ -14,8 +14,15 @@ const dbConfig: PoolConfig = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: false
 };
+
+console.log({
+  DB_HOST: process.env.DB_HOST,
+  DB_NAME: process.env.DB_NAME,
+  DB_USER: process.env.DB_USER,
+  NODE_ENV: process.env.NODE_ENV,
+});
 
 // Criar uma instância do pool de conexões
 const pool = new Pool(dbConfig);
