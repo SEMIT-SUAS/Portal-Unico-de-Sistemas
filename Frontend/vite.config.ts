@@ -21,7 +21,7 @@ proxy: {
 
 // tudo que começar com /api será redirecionado pro backend
 
-'/api': {
+'/api/api': {
 
 target: 'http://localhost:3001',
 
