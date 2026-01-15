@@ -112,7 +112,7 @@ export const dashboardService = {
 
 // Serviços para categorias
 export const categoryService = {
-  getAll: () => api.get('/api/categories'),
+  getAll: () => api.get('/categories'),
   getDepartments: () => api.get('/categories/departments'),
   getSecretaries: () => api.get('/categories/secretaries'),
 };

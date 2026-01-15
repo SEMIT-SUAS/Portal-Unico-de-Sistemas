@@ -32,7 +32,7 @@ export function CategoryNav({
           params.append('department', selectedDepartment);
         }
 
-        const response = await fetch(`/api/categories/filtered-counts?${params}`);
+        const response = await fetch(`/api/api/categories/filtered-counts?${params}`);
         const result = await response.json();
 
         if (result.success) {
