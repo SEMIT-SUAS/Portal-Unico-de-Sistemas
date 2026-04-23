@@ -36,7 +36,14 @@ export function CategoryNav({
         const result = await response.json();
 
         if (result.success) {
-          setFilteredSystemCounts(result.data.counts);
+          const counts = Array.isArray(result.data)
+            ? result.data.reduce((acc: Record<string, number>, item: { category: string; count: number }) => {
+                acc[item.category] = item.count;
+                return acc;
+              }, {})
+            : (result.data?.counts || {});
+
+          setFilteredSystemCounts(counts);
         } else {
           setFilteredSystemCounts({});
         }
@@ -90,10 +97,10 @@ export function CategoryNav({
   const getTotalCount = () => {
     // Se há um departamento selecionado E temos contagens filtradas, soma os valores filtrados
     if (selectedDepartment && filteredSystemCounts && Object.keys(filteredSystemCounts).length > 0) {
-      return Object.values(filteredSystemCounts).reduce((sum, count) => sum + count, 0);
+      return filteredSystemCounts.total ?? 0;
     }
     // Caso contrário, usa o total de systemCounts
-    return Object.values(systemCounts).reduce((sum, count) => sum + count, 0);
+    return systemCounts.total ?? 0;
   };
 
   return (

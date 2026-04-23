@@ -7,7 +7,7 @@ export interface DigitalSystem {
   responsibleSecretary: string;
   launchYear: number;
   mainFeatures: string[];
-  category: 'novidades' | 'destaques' | 'mais-usados' | 'cidadao' | 'interno' | 'por-secretaria' | 'inativos'; // Adicione 'inativos'
+  category: 'novidades' | 'destaques' | 'mais-usados' | 'cidadao' | 'interno' | 'por-secretaria' | 'inativos' | 'ativos'; // Adicione 'inativos'
   isHighlight?: boolean;  
   isNew?: boolean;
   iconUrl?: string;
@@ -215,6 +215,7 @@ export const digitalSystems: DigitalSystem[] = [
 ];
 
 export const categories = {
+  'ativos': 'Sistemas Ativos',
   'novidades': 'Novidades',
   'destaques': 'Destaques',
   'mais-usados': 'Mais Usados',

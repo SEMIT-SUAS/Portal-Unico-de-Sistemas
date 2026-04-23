@@ -114,7 +114,11 @@ export default function App() {
 
     // Filter by category
     if (selectedCategory) {
-      filtered = filtered.filter(system => system.category === selectedCategory);
+      filtered = filtered.filter(system =>
+        selectedCategory === 'ativos'
+          ? system.category !== 'inativos'
+          : system.category === selectedCategory
+      );
     }
 
     // Filter by department
@@ -151,8 +155,13 @@ export default function App() {
   const systemCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     Object.keys(categories).forEach(category => {
-      counts[category] = systems.filter(system => system.category === category).length;
+      counts[category] = systems.filter(system =>
+        category === 'ativos'
+          ? system.category !== 'inativos'
+          : system.category === category
+      ).length;
     });
+    counts.total = systems.length;
     return counts;
   }, [systems]);
 

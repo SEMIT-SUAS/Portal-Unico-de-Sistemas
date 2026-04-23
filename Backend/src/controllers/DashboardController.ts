@@ -166,6 +166,19 @@ export const DashboardController = {
         count: parseInt(row.count) || 0
       }));
 
+      const total = categoryCounts.reduce((sum, item) => sum + item.count, 0);
+      const inactiveCount = categoryCounts.find(item => item.category === 'inativos')?.count || 0;
+
+      categoryCounts.unshift({
+        category: 'ativos',
+        count: total - inactiveCount
+      });
+
+      categoryCounts.push({
+        category: 'total',
+        count: total
+      });
+
       res.json({
         success: true,
         data: categoryCounts
